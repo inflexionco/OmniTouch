@@ -2,6 +2,7 @@ package com.empyreanlabs.omnitouch.model
 
 import androidx.annotation.DrawableRes
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.ui.graphics.vector.ImageVector
 
@@ -86,14 +87,14 @@ sealed class OmniTouchAction(
         id = "toggle_flashlight",
         displayName = "Flashlight",
         description = "Toggle flashlight on/off",
-        icon = Icons.Default.Flashlight
+        icon = Icons.Default.FlashlightOn
     )
 
     data object VolumeUp : OmniTouchAction(
         id = "volume_up",
         displayName = "Volume Up",
         description = "Increase volume",
-        icon = Icons.Default.VolumeUp
+        icon = Icons.AutoMirrored.Default.VolumeUp
     )
 
     data object VolumeDown : OmniTouchAction(

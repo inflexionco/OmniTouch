@@ -141,8 +141,8 @@ class ActionExecutor @Inject constructor(
         }
 
         // Fall back to Device Admin
-        if (PermissionUtils.isDeviceAdminActive(context)) {
-            return try {
+        return if (PermissionUtils.isDeviceAdminActive(context)) {
+            try {
                 val devicePolicyManager = context.getSystemService<DevicePolicyManager>()
                 val componentName = ComponentName(context, OmniTouchDeviceAdminReceiver::class.java)
                 devicePolicyManager?.lockNow()
@@ -153,7 +153,6 @@ class ActionExecutor @Inject constructor(
             }
         } else {
             showError("Device Admin permission required for lock screen")
-            // Optionally, open device admin settings
             false
         }
     }

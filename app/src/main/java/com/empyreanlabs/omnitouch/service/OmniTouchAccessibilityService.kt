@@ -200,7 +200,7 @@ class OmniTouchAccessibilityService : AccessibilityService() {
     /**
      * Get the root node of the current window for advanced interactions.
      */
-    fun getRootInActiveWindow(): AccessibilityNodeInfo? {
+    override fun getRootInActiveWindow(): AccessibilityNodeInfo? {
         return try {
             rootInActiveWindow
         } catch (e: Exception) {

@@ -1,0 +1,12 @@
+<resources>
+    <string name="app_name">Omni Touch</string>
+
+    <!-- Accessibility Service -->
+    <string name="accessibility_service_description">Allows Omni Touch to perform system-level actions like going home, taking screenshots, and accessing recent apps. No personal data is collected or monitored.</string>
+
+    <!-- Overlay Service Notification -->
+    <string name="overlay_service_notification_title">Omni Touch Active</string>
+    <string name="overlay_service_notification_content">Tap to configure settings</string>
+    <string name="overlay_service_notification_channel_name">Overlay Service</string>
+    <string name="overlay_service_notification_channel_description">Keeps Omni Touch running in the background</string>
+</resources>

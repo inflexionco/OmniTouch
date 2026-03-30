@@ -1,8 +1,7 @@
 package com.empyreanlabs.omnitouch.ui.overlay
 
-import android.view.GestureDetector
-import android.view.MotionEvent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -14,13 +13,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.empyreanlabs.omnitouch.data.SettingsRepository
 import com.empyreanlabs.omnitouch.model.OmniTouchAction
 import com.empyreanlabs.omnitouch.util.ActionExecutor
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /**
@@ -34,7 +32,6 @@ fun FloatingButton(
     onMenuVisibilityChange: (Boolean) -> Unit
 ) {
     val context = LocalContext.current
-    val configuration = LocalConfiguration.current
     val scope = rememberCoroutineScope()
 
     // Button settings
@@ -67,53 +64,47 @@ fun FloatingButton(
         }
     }
 
-    // Gesture handling
-    val gestureDetector = remember {
-        GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
-            override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
-                // Handle single tap
-                scope.launch {
-                    val action = OmniTouchAction.fromId(singleTapActionId)
-                    if (action != null) {
-                        if (action == OmniTouchAction.ShowMenu) {
-                            onMenuVisibilityChange(true)
-                        } else {
-                            actionExecutor.executeAction(action, hapticFeedback)
-                        }
-                    }
-                }
-                return true
-            }
-
-            override fun onLongPress(e: MotionEvent) {
-                // Handle long press
-                scope.launch {
-                    val action = OmniTouchAction.fromId(longPressActionId)
-                    if (action != null && action != OmniTouchAction.NoAction) {
-                        actionExecutor.executeAction(action, hapticFeedback)
-                    }
-                }
-            }
-
-            override fun onDoubleTap(e: MotionEvent): Boolean {
-                // Handle double tap
-                scope.launch {
-                    val action = OmniTouchAction.fromId(doubleTapActionId)
-                    if (action != null && action != OmniTouchAction.NoAction) {
-                        actionExecutor.executeAction(action, hapticFeedback)
-                    }
-                }
-                return true
-            }
-        })
-    }
-
     Box(
         modifier = Modifier
             .size(buttonSize.dp)
             .alpha(buttonOpacity)
             .clip(CircleShape)
-            .background(Color(0xFF2196F3)),
+            .background(Color(0xFF2196F3))
+            .pointerInput(singleTapActionId, longPressActionId, doubleTapActionId) {
+                detectTapGestures(
+                    onTap = {
+                        // Handle single tap
+                        scope.launch {
+                            val action = OmniTouchAction.fromId(singleTapActionId)
+                            if (action != null) {
+                                if (action == OmniTouchAction.ShowMenu) {
+                                    onMenuVisibilityChange(true)
+                                } else {
+                                    actionExecutor.executeAction(action, hapticFeedback)
+                                }
+                            }
+                        }
+                    },
+                    onLongPress = {
+                        // Handle long press
+                        scope.launch {
+                            val action = OmniTouchAction.fromId(longPressActionId)
+                            if (action != null && action != OmniTouchAction.NoAction) {
+                                actionExecutor.executeAction(action, hapticFeedback)
+                            }
+                        }
+                    },
+                    onDoubleTap = {
+                        // Handle double tap
+                        scope.launch {
+                            val action = OmniTouchAction.fromId(doubleTapActionId)
+                            if (action != null && action != OmniTouchAction.NoAction) {
+                                actionExecutor.executeAction(action, hapticFeedback)
+                            }
+                        }
+                    }
+                )
+            },
         contentAlignment = Alignment.Center
     ) {
         Icon(

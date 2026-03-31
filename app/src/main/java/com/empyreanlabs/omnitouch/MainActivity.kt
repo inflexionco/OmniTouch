@@ -89,6 +89,12 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    override fun onResume() {
+        super.onResume()
+        // Refresh permission states when returning from settings
+        // The polling in ViewModel will pick up changes within 1 second
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

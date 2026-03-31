@@ -1,6 +1,7 @@
 package com.empyreanlabs.omnitouch.ui.overlay
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -12,14 +13,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.empyreanlabs.omnitouch.data.SettingsRepository
 import com.empyreanlabs.omnitouch.model.OmniTouchAction
 import com.empyreanlabs.omnitouch.util.ActionExecutor
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 /**
  * Floating button overlay composable.
@@ -29,10 +34,12 @@ import kotlinx.coroutines.launch
 fun FloatingButton(
     settingsRepository: SettingsRepository,
     actionExecutor: ActionExecutor,
-    onMenuVisibilityChange: (Boolean) -> Unit
+    onMenuVisibilityChange: (Boolean) -> Unit,
+    onPositionChange: (Int, Int) -> Unit
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val density = LocalDensity.current
 
     // Button settings
     var buttonSize by remember { mutableFloatStateOf(SettingsRepository.DEFAULT_BUTTON_SIZE) }

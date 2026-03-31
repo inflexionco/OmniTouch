@@ -23,6 +23,13 @@ class MainViewModel @Inject constructor(
 
     private val context = application.applicationContext
 
+    // Manual refresh trigger
+    private val _refreshTrigger = MutableStateFlow(0)
+
+    fun refreshPermissions() {
+        _refreshTrigger.value++
+    }
+
     // Permission state flow
     val permissionState: StateFlow<PermissionUtils.PermissionState> = flow {
         while (true) {

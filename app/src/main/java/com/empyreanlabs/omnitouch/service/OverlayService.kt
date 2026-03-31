@@ -31,7 +31,9 @@ import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.empyreanlabs.omnitouch.MainActivity
 import com.empyreanlabs.omnitouch.R
 import com.empyreanlabs.omnitouch.data.SettingsRepository
-import com.empyreanlabs.omnitouch.ui.overlay.FloatingButton
+import androidx.compose.foundation.layout.Box
+import com.empyreanlabs.omnitouch.ui.overlay.AssistiveMenu
+import com.empyreanlabs.omnitouch.ui.overlay.DraggableFloatingButton
 import com.empyreanlabs.omnitouch.util.ActionExecutor
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
@@ -121,23 +123,6 @@ class OverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStat
 
     private fun addFloatingButton() {
         try {
-            // Create Compose view
-            composeView = ComposeView(this).apply {
-                setViewTreeLifecycleOwner(this@OverlayService)
-                setViewTreeViewModelStoreOwner(this@OverlayService)
-                setViewTreeSavedStateRegistryOwner(this@OverlayService)
-
-                setContent {
-                    FloatingButton(
-                        settingsRepository = settingsRepository,
-                        actionExecutor = actionExecutor,
-                        onMenuVisibilityChange = { visible ->
-                            isMenuVisible = visible
-                        }
-                    )
-                }
-            }
-
             // Window layout parameters
             val params = WindowManager.LayoutParams(
                 WindowManager.LayoutParams.WRAP_CONTENT,
@@ -148,12 +133,12 @@ class OverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStat
                     @Suppress("DEPRECATION")
                     WindowManager.LayoutParams.TYPE_PHONE
                 },
-                // Remove FLAG_NOT_FOCUSABLE to allow touch events
-                // FLAG_NOT_TOUCH_MODAL allows touches outside to pass through
-                // FLAG_WATCH_OUTSIDE_TOUCH allows detecting clicks outside the window
-                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-                        WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
-                        WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
+                // FLAG_NOT_FOCUSABLE: Window won't take input focus (system can still interact)
+                // FLAG_NOT_TOUCH_MODAL: Touches outside the button pass through to other windows
+                // FLAG_LAYOUT_NO_LIMITS: Allow positioning outside screen bounds
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                        WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                        WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
                 PixelFormat.TRANSLUCENT
             ).apply {
                 gravity = Gravity.TOP or Gravity.START
@@ -167,6 +152,41 @@ class OverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStat
                     }
                 }
             }
+
+            // Create Compose view
+            val view = ComposeView(this).apply {
+                setViewTreeLifecycleOwner(this@OverlayService)
+                setViewTreeViewModelStoreOwner(this@OverlayService)
+                setViewTreeSavedStateRegistryOwner(this@OverlayService)
+
+                setContent {
+                    Box {
+                        // Draggable floating button
+                        DraggableFloatingButton(
+                            settingsRepository = settingsRepository,
+                            actionExecutor = actionExecutor,
+                            windowManager = windowManager,
+                            layoutParams = params,
+                            view = this@apply,
+                            onMenuVisibilityChange = { visible ->
+                                isMenuVisible = visible
+                            }
+                        )
+
+                        // Show menu overlay when visible
+                        if (isMenuVisible) {
+                            AssistiveMenu(
+                                settingsRepository = settingsRepository,
+                                actionExecutor = actionExecutor,
+                                onDismiss = {
+                                    isMenuVisible = false
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+            composeView = view
 
             // Add view to window
             windowManager.addView(composeView, params)

@@ -33,7 +33,7 @@ import com.empyreanlabs.omnitouch.R
 import com.empyreanlabs.omnitouch.data.SettingsRepository
 import androidx.compose.foundation.layout.Box
 import com.empyreanlabs.omnitouch.ui.overlay.AssistiveMenu
-import com.empyreanlabs.omnitouch.ui.overlay.DraggableFloatingButton
+import com.empyreanlabs.omnitouch.ui.overlay.EdgeSnappingFloatingButton
 import com.empyreanlabs.omnitouch.util.ActionExecutor
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
@@ -161,8 +161,8 @@ class OverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStat
 
                 setContent {
                     Box {
-                        // Draggable floating button
-                        DraggableFloatingButton(
+                        // Edge-snapping floating button with move-aside
+                        EdgeSnappingFloatingButton(
                             settingsRepository = settingsRepository,
                             actionExecutor = actionExecutor,
                             windowManager = windowManager,

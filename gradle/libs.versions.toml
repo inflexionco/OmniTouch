@@ -10,11 +10,12 @@ espressoCore = "3.7.0"
 hilt = "2.59.2"
 junit = "4.13.2"
 junitVersion = "1.3.0"
-kotlin = "2.2.10"
-ksp = "2.2.10-2.0.2"
+kotlin = "2.0.21"
+ksp = "2.0.21-1.0.28"
 lifecycle = "2.10.0"
 materialIconsExtended = "1.7.6"
 navigationCompose = "2.8.5"
+room = "2.6.1"
 
 [libraries]
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
@@ -40,6 +41,9 @@ hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref
 hilt-compiler = { group = "com.google.dagger", name = "hilt-compiler", version.ref = "hilt" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
+androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
+androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
+androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

@@ -66,6 +66,11 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.kotlinx.coroutines.android)
 
+    // Room disabled temporarily due to KSP compilation issues
+    // implementation(libs.androidx.room.runtime)
+    // implementation(libs.androidx.room.ktx)
+    // ksp(libs.androidx.room.compiler)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

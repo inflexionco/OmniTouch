@@ -21,6 +21,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.empyreanlabs.omnitouch.data.SettingsRepository
 import com.empyreanlabs.omnitouch.service.OverlayService
 import com.empyreanlabs.omnitouch.ui.MainViewModel
+import com.empyreanlabs.omnitouch.ui.settings.SettingsScreen
 import com.empyreanlabs.omnitouch.ui.theme.OmniTouchTheme
 import com.empyreanlabs.omnitouch.util.PermissionUtils
 import dagger.hilt.android.AndroidEntryPoint
@@ -56,35 +57,47 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             OmniTouchTheme {
+                var showSettings by remember { mutableStateOf(false) }
+                val viewModel: MainViewModel = viewModel()
+
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    MainScreen(
-                        onRequestOverlayPermission = {
-                            overlayPermissionLauncher.launch(
-                                PermissionUtils.requestOverlayPermission(this)
-                            )
-                        },
-                        onRequestAccessibilityPermission = {
-                            accessibilityPermissionLauncher.launch(
-                                PermissionUtils.requestAccessibilityPermission(this)
-                            )
-                        },
-                        onRequestDeviceAdmin = {
-                            deviceAdminLauncher.launch(
-                                PermissionUtils.requestDeviceAdminPermission(this)
-                            )
-                        },
-                        onStartService = {
-                            if (PermissionUtils.hasOverlayPermission(this)) {
-                                OverlayService.start(this)
-                            }
-                        },
-                        onStopService = {
-                            OverlayService.stop(this)
-                        }
-                    )
+                    if (showSettings) {
+                        SettingsScreen(
+                            viewModel = viewModel,
+                            onNavigateBack = { showSettings = false }
+                        )
+                    } else {
+                        MainScreen(
+                            viewModel = viewModel,
+                            onRequestOverlayPermission = {
+                                overlayPermissionLauncher.launch(
+                                    PermissionUtils.requestOverlayPermission(this)
+                                )
+                            },
+                            onRequestAccessibilityPermission = {
+                                accessibilityPermissionLauncher.launch(
+                                    PermissionUtils.requestAccessibilityPermission(this)
+                                )
+                            },
+                            onRequestDeviceAdmin = {
+                                deviceAdminLauncher.launch(
+                                    PermissionUtils.requestDeviceAdminPermission(this)
+                                )
+                            },
+                            onStartService = {
+                                if (PermissionUtils.hasOverlayPermission(this)) {
+                                    OverlayService.start(this)
+                                }
+                            },
+                            onStopService = {
+                                OverlayService.stop(this)
+                            },
+                            onNavigateToSettings = { showSettings = true }
+                        )
+                    }
                 }
             }
         }
@@ -105,7 +118,8 @@ fun MainScreen(
     onRequestAccessibilityPermission: () -> Unit,
     onRequestDeviceAdmin: () -> Unit,
     onStartService: () -> Unit,
-    onStopService: () -> Unit
+    onStopService: () -> Unit,
+    onNavigateToSettings: () -> Unit
 ) {
     val permissionState by viewModel.permissionState.collectAsStateWithLifecycle()
     val buttonOpacity by viewModel.buttonOpacity.collectAsStateWithLifecycle()
@@ -115,9 +129,18 @@ fun MainScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Omni Touch") },
+                actions = {
+                    IconButton(onClick = onNavigateToSettings) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = "Settings"
+                        )
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary
+                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                    actionIconContentColor = MaterialTheme.colorScheme.onPrimary
                 )
             )
         }

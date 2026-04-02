@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.empyreanlabs.omnitouch.data.SettingsRepository
+import com.empyreanlabs.omnitouch.model.MenuLayoutType
 import com.empyreanlabs.omnitouch.service.OverlayService
 import com.empyreanlabs.omnitouch.util.PermissionUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -69,7 +70,37 @@ class MainViewModel @Inject constructor(
             initialValue = SettingsRepository.DEFAULT_BUTTON_SIZE
         )
 
-    // Update settings
+    // Menu settings
+    val menuLayoutType: StateFlow<MenuLayoutType> = settingsRepository.menuLayoutType
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = MenuLayoutType.GRID
+        )
+
+    val menuGridSize: StateFlow<Int> = settingsRepository.menuGridSize
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = SettingsRepository.DEFAULT_MENU_GRID_SIZE
+        )
+
+    // App settings
+    val startOnBoot: StateFlow<Boolean> = settingsRepository.startOnBoot
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = SettingsRepository.DEFAULT_START_ON_BOOT
+        )
+
+    val hapticFeedback: StateFlow<Boolean> = settingsRepository.hapticFeedback
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = SettingsRepository.DEFAULT_HAPTIC_FEEDBACK
+        )
+
+    // Update button settings
     fun updateButtonOpacity(opacity: Float) {
         viewModelScope.launch {
             settingsRepository.updateButtonOpacity(opacity)
@@ -79,6 +110,32 @@ class MainViewModel @Inject constructor(
     fun updateButtonSize(size: Float) {
         viewModelScope.launch {
             settingsRepository.updateButtonSize(size)
+        }
+    }
+
+    // Update menu settings
+    fun updateMenuLayoutType(layoutType: MenuLayoutType) {
+        viewModelScope.launch {
+            settingsRepository.updateMenuLayoutType(layoutType)
+        }
+    }
+
+    fun updateMenuGridSize(size: Int) {
+        viewModelScope.launch {
+            settingsRepository.updateMenuGridSize(size)
+        }
+    }
+
+    // Update app settings
+    fun updateStartOnBoot(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.updateStartOnBoot(enabled)
+        }
+    }
+
+    fun updateHapticFeedback(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.updateHapticFeedback(enabled)
         }
     }
 }

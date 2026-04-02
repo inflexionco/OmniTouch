@@ -148,6 +148,7 @@ fun GridPopupMenu(
                                     iconColor = tileIconColor,
                                     labelColor = tileLabelColor,
                                     alpha = animatedAlpha,
+                                    actionExecutor = actionExecutor,
                                     onClick = {
                                         scope.launch {
                                             actionExecutor.executeAction(action, hapticFeedback)
@@ -249,14 +250,19 @@ private fun GridMenuItem(
     iconColor: Color,
     labelColor: Color,
     alpha: Float,
+    actionExecutor: ActionExecutor,
     onClick: () -> Unit
 ) {
+    val canExecute = remember(action) { actionExecutor.canExecuteAction(action) }
+    val itemAlpha = if (canExecute) alpha else alpha * 0.4f
+    val itemBackgroundColor = if (canExecute) backgroundColor else backgroundColor.copy(alpha = 0.5f)
+
     Column(
         modifier = Modifier
             .size(60.dp)
             .clip(RoundedCornerShape(12.dp))
-            .background(backgroundColor.copy(alpha = alpha))
-            .clickable(onClick = onClick)
+            .background(itemBackgroundColor.copy(alpha = itemAlpha))
+            .clickable(enabled = canExecute, onClick = onClick)
             .padding(6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
@@ -264,7 +270,7 @@ private fun GridMenuItem(
         Icon(
             imageVector = action.icon,
             contentDescription = action.displayName,
-            tint = iconColor.copy(alpha = alpha),
+            tint = iconColor.copy(alpha = itemAlpha),
             modifier = Modifier.size(24.dp)
         )
         Spacer(modifier = Modifier.height(4.dp))
@@ -274,7 +280,7 @@ private fun GridMenuItem(
             textAlign = TextAlign.Center,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            color = labelColor.copy(alpha = alpha)
+            color = labelColor.copy(alpha = itemAlpha)
         )
     }
 }

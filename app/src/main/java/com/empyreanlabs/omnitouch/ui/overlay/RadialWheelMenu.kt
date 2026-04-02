@@ -141,6 +141,7 @@ fun RadialWheelMenu(
                 itemSize = itemSize,
                 alpha = animatedAlpha,
                 angle = angle,
+                actionExecutor = actionExecutor,
                 onClick = {
                     scope.launch {
                         actionExecutor.executeAction(action, hapticFeedback)
@@ -256,12 +257,17 @@ private fun RadialMenuItem(
     itemSize: androidx.compose.ui.unit.Dp,
     alpha: Float,
     angle: Float,
+    actionExecutor: ActionExecutor,
     onClick: () -> Unit
 ) {
+    val canExecute = remember(action) { actionExecutor.canExecuteAction(action) }
+    val itemAlpha = if (canExecute) alpha else alpha * 0.4f
+    val itemBackgroundColor = if (canExecute) Color(0xFF2196F3) else Color(0xFF2196F3).copy(alpha = 0.5f)
+
     Box(
         modifier = Modifier
             .offset { IntOffset(x, y) }
-            .alpha(alpha)
+            .alpha(itemAlpha)
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -273,14 +279,14 @@ private fun RadialMenuItem(
                     .size(itemSize)
                     .shadow(8.dp, CircleShape)
                     .clip(CircleShape)
-                    .background(Color(0xFF2196F3))
-                    .clickable(onClick = onClick),
+                    .background(itemBackgroundColor)
+                    .clickable(enabled = canExecute, onClick = onClick),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = action.icon,
                     contentDescription = action.displayName,
-                    tint = Color.White,
+                    tint = Color.White.copy(alpha = if (canExecute) 1f else 0.6f),
                     modifier = Modifier.size(28.dp)
                 )
             }
@@ -294,7 +300,7 @@ private fun RadialMenuItem(
                 textAlign = TextAlign.Center,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                color = Color.White
+                color = Color.White.copy(alpha = if (canExecute) 1f else 0.6f)
             )
         }
     }

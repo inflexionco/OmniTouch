@@ -13,7 +13,9 @@ import android.os.IBinder
 import android.view.Gravity
 import android.view.WindowManager
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.ComposeView
 import androidx.core.app.NotificationCompat
@@ -32,7 +34,8 @@ import com.empyreanlabs.omnitouch.MainActivity
 import com.empyreanlabs.omnitouch.R
 import com.empyreanlabs.omnitouch.data.SettingsRepository
 import androidx.compose.foundation.layout.Box
-import com.empyreanlabs.omnitouch.ui.overlay.AssistiveMenu
+import androidx.compose.runtime.LaunchedEffect
+import com.empyreanlabs.omnitouch.ui.overlay.GridPopupMenu
 import com.empyreanlabs.omnitouch.ui.overlay.EdgeSnappingFloatingButton
 import com.empyreanlabs.omnitouch.util.ActionExecutor
 import dagger.hilt.android.AndroidEntryPoint
@@ -160,6 +163,13 @@ class OverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStat
                 setViewTreeSavedStateRegistryOwner(this@OverlayService)
 
                 setContent {
+                    // Track button size from settings
+                    var buttonSize by remember { mutableFloatStateOf(SettingsRepository.DEFAULT_BUTTON_SIZE) }
+
+                    LaunchedEffect(Unit) {
+                        settingsRepository.buttonSize.collect { buttonSize = it }
+                    }
+
                     Box {
                         // Edge-snapping floating button with move-aside
                         EdgeSnappingFloatingButton(
@@ -175,9 +185,12 @@ class OverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStat
 
                         // Show menu overlay when visible
                         if (isMenuVisible) {
-                            AssistiveMenu(
+                            GridPopupMenu(
                                 settingsRepository = settingsRepository,
                                 actionExecutor = actionExecutor,
+                                buttonX = params.x,
+                                buttonY = params.y,
+                                buttonSize = buttonSize,
                                 onDismiss = {
                                     isMenuVisible = false
                                 }

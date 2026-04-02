@@ -35,7 +35,9 @@ import com.empyreanlabs.omnitouch.R
 import com.empyreanlabs.omnitouch.data.SettingsRepository
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.LaunchedEffect
+import com.empyreanlabs.omnitouch.model.MenuLayoutType
 import com.empyreanlabs.omnitouch.ui.overlay.GridPopupMenu
+import com.empyreanlabs.omnitouch.ui.overlay.RadialWheelMenu
 import com.empyreanlabs.omnitouch.ui.overlay.EdgeSnappingFloatingButton
 import com.empyreanlabs.omnitouch.util.ActionExecutor
 import dagger.hilt.android.AndroidEntryPoint
@@ -163,11 +165,17 @@ class OverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStat
                 setViewTreeSavedStateRegistryOwner(this@OverlayService)
 
                 setContent {
-                    // Track button size from settings
+                    // Track button size and menu layout type from settings
                     var buttonSize by remember { mutableFloatStateOf(SettingsRepository.DEFAULT_BUTTON_SIZE) }
+                    var menuLayoutType by remember { mutableStateOf(MenuLayoutType.GRID) }
 
                     LaunchedEffect(Unit) {
-                        settingsRepository.buttonSize.collect { buttonSize = it }
+                        launch {
+                            settingsRepository.buttonSize.collect { buttonSize = it }
+                        }
+                        launch {
+                            settingsRepository.menuLayoutType.collect { menuLayoutType = it }
+                        }
                     }
 
                     Box {
@@ -183,18 +191,30 @@ class OverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStat
                             }
                         )
 
-                        // Show menu overlay when visible
+                        // Show menu overlay when visible (switch between Grid and Radial)
                         if (isMenuVisible) {
-                            GridPopupMenu(
-                                settingsRepository = settingsRepository,
-                                actionExecutor = actionExecutor,
-                                buttonX = params.x,
-                                buttonY = params.y,
-                                buttonSize = buttonSize,
-                                onDismiss = {
-                                    isMenuVisible = false
-                                }
-                            )
+                            when (menuLayoutType) {
+                                MenuLayoutType.GRID -> GridPopupMenu(
+                                    settingsRepository = settingsRepository,
+                                    actionExecutor = actionExecutor,
+                                    buttonX = params.x,
+                                    buttonY = params.y,
+                                    buttonSize = buttonSize,
+                                    onDismiss = {
+                                        isMenuVisible = false
+                                    }
+                                )
+                                MenuLayoutType.RADIAL -> RadialWheelMenu(
+                                    settingsRepository = settingsRepository,
+                                    actionExecutor = actionExecutor,
+                                    buttonX = params.x,
+                                    buttonY = params.y,
+                                    buttonSize = buttonSize,
+                                    onDismiss = {
+                                        isMenuVisible = false
+                                    }
+                                )
+                            }
                         }
                     }
                 }

@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
+import com.empyreanlabs.omnitouch.model.MenuLayoutType
 import com.empyreanlabs.omnitouch.model.OmniTouchAction
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
@@ -40,6 +41,7 @@ class SettingsRepository @Inject constructor(
         val DOUBLE_TAP_ACTION = stringPreferencesKey("double_tap_action")
 
         // Menu Configuration (storing action IDs as comma-separated string)
+        val MENU_LAYOUT_TYPE = stringPreferencesKey("menu_layout_type")
         val MENU_GRID_SIZE = intPreferencesKey("menu_grid_size")
         val MENU_ACTIONS = stringPreferencesKey("menu_actions")
 
@@ -53,6 +55,7 @@ class SettingsRepository @Inject constructor(
     companion object {
         const val DEFAULT_BUTTON_SIZE = 60f
         const val DEFAULT_BUTTON_OPACITY = 0.8f
+        val DEFAULT_MENU_LAYOUT_TYPE = MenuLayoutType.GRID.id
         const val DEFAULT_MENU_GRID_SIZE = 3
         val DEFAULT_SINGLE_TAP_ACTION = OmniTouchAction.ShowMenu.id
         val DEFAULT_LONG_PRESS_ACTION = OmniTouchAction.NoAction.id
@@ -116,6 +119,13 @@ class SettingsRepository @Inject constructor(
         }
 
     // Menu Configuration
+    val menuLayoutType: Flow<MenuLayoutType> = dataStore.data
+        .catch { handleException(it) }
+        .map { preferences ->
+            val layoutTypeId = preferences[PreferenceKeys.MENU_LAYOUT_TYPE] ?: DEFAULT_MENU_LAYOUT_TYPE
+            MenuLayoutType.fromId(layoutTypeId)
+        }
+
     val menuGridSize: Flow<Int> = dataStore.data
         .catch { handleException(it) }
         .map { preferences ->
@@ -187,6 +197,12 @@ class SettingsRepository @Inject constructor(
     suspend fun updateDoubleTapAction(actionId: String) {
         dataStore.edit { preferences ->
             preferences[PreferenceKeys.DOUBLE_TAP_ACTION] = actionId
+        }
+    }
+
+    suspend fun updateMenuLayoutType(layoutType: MenuLayoutType) {
+        dataStore.edit { preferences ->
+            preferences[PreferenceKeys.MENU_LAYOUT_TYPE] = layoutType.id
         }
     }
 

@@ -62,7 +62,7 @@ fun RadialWheelMenu(
     val wheelRadius = 120.dp // Configurable radius
     val isFullCircle = false // false = semicircle (default), true = full circle
     val itemSize = 56.dp
-    val dimLevel = 0.5f
+    val dimLevel = 0.15f // Reduced from 0.5f to barely visible
 
     // Animation state
     var isVisible by remember { mutableStateOf(false) }

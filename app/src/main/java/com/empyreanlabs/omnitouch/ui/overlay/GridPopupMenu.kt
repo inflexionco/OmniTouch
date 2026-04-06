@@ -63,7 +63,7 @@ fun GridPopupMenu(
     val tileColor = Color(0xFF2C2C2C) // Slightly lighter tile background
     val tileIconColor = Color.White
     val tileLabelColor = Color.White.copy(alpha = 0.9f)
-    val dimLevel = 0.5f // 50% dim
+    val dimLevel = 0.15f // Reduced from 0.5f to barely visible
 
     // Animation state
     var isVisible by remember { mutableStateOf(false) }

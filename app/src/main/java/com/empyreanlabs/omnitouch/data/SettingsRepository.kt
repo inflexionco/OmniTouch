@@ -64,17 +64,13 @@ class SettingsRepository @Inject constructor(
         const val DEFAULT_HAPTIC_FEEDBACK = true
         const val DEFAULT_FIRST_LAUNCH = true
 
-        // Default menu actions (9 slots for 3x3 grid)
+        // Default menu actions (5 most commonly used, like MI Quick Ball)
         val DEFAULT_MENU_ACTIONS = listOf(
             OmniTouchAction.Home,
             OmniTouchAction.Back,
             OmniTouchAction.RecentApps,
             OmniTouchAction.TakeScreenshot,
-            OmniTouchAction.NotificationPanel,
-            OmniTouchAction.QuickSettings,
-            OmniTouchAction.LockScreen,
-            OmniTouchAction.ToggleFlashlight,
-            OmniTouchAction.NoAction
+            OmniTouchAction.LockScreen
         )
     }
 

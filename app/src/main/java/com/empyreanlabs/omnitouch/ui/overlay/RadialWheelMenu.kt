@@ -196,12 +196,14 @@ private fun calculateRadialMenuPosition(
         if (distToLeft < distToRight) {
             // Button on left - menu opens to the right
             orientation = 0.0 // 0 degrees (right)
-            centerX = buttonCenterX + wheelRadiusPx / 2
+            // Position menu center to the right of the button, with proper spacing
+            centerX = buttonCenterX + buttonSizePx / 2 + wheelRadiusPx
             centerY = buttonCenterY
         } else {
             // Button on right - menu opens to the left
             orientation = 180.0 // 180 degrees (left)
-            centerX = buttonCenterX - wheelRadiusPx / 2
+            // Position menu center to the left of the button, with proper spacing
+            centerX = buttonCenterX - buttonSizePx / 2 - wheelRadiusPx
             centerY = buttonCenterY
         }
     } else {
@@ -209,13 +211,15 @@ private fun calculateRadialMenuPosition(
         if (distToTop < distToBottom) {
             // Button on top - menu opens downward
             orientation = 90.0 // 90 degrees (down)
+            // Position menu center below the button, with proper spacing
             centerX = buttonCenterX
-            centerY = buttonCenterY + wheelRadiusPx / 2
+            centerY = buttonCenterY + buttonSizePx / 2 + wheelRadiusPx
         } else {
             // Button on bottom - menu opens upward
             orientation = 270.0 // 270 degrees (up)
+            // Position menu center above the button, with proper spacing
             centerX = buttonCenterX
-            centerY = buttonCenterY - wheelRadiusPx / 2
+            centerY = buttonCenterY - buttonSizePx / 2 - wheelRadiusPx
         }
     }
 

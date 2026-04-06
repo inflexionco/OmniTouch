@@ -85,6 +85,13 @@ class MainViewModel @Inject constructor(
             initialValue = SettingsRepository.DEFAULT_MENU_GRID_SIZE
         )
 
+    val menuActions: StateFlow<List<String>> = settingsRepository.menuActions
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = SettingsRepository.DEFAULT_MENU_ACTIONS.map { it.id }
+        )
+
     // App settings
     val startOnBoot: StateFlow<Boolean> = settingsRepository.startOnBoot
         .stateIn(
@@ -123,6 +130,12 @@ class MainViewModel @Inject constructor(
     fun updateMenuGridSize(size: Int) {
         viewModelScope.launch {
             settingsRepository.updateMenuGridSize(size)
+        }
+    }
+
+    fun updateMenuActions(actions: List<String>) {
+        viewModelScope.launch {
+            settingsRepository.updateMenuActions(actions)
         }
     }
 

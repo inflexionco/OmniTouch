@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.empyreanlabs.omnitouch.data.SettingsRepository
 import com.empyreanlabs.omnitouch.model.MenuLayoutType
+import com.empyreanlabs.omnitouch.model.OmniTouchAction
 import com.empyreanlabs.omnitouch.ui.MainViewModel
 import kotlinx.coroutines.launch
 
@@ -41,10 +42,14 @@ fun SettingsScreen(
     // Menu settings
     val menuLayoutType by viewModel.menuLayoutType.collectAsStateWithLifecycle()
     val menuGridSize by viewModel.menuGridSize.collectAsStateWithLifecycle()
+    val menuActions by viewModel.menuActions.collectAsStateWithLifecycle()
 
     // App settings
     val startOnBoot by viewModel.startOnBoot.collectAsStateWithLifecycle()
     val hapticFeedback by viewModel.hapticFeedback.collectAsStateWithLifecycle()
+
+    // Menu action editor dialog state
+    var showMenuActionEditor by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -133,7 +138,30 @@ fun SettingsScreen(
                         onValueChange = { scope.launch { viewModel.updateMenuGridSize(it.toInt()) } },
                         steps = 1
                     )
+
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                 }
+
+                // Menu Actions Editor
+                SettingsNavigationItem(
+                    label = "Menu Actions",
+                    description = "${menuActions.size} actions configured",
+                    onClick = { showMenuActionEditor = true }
+                )
+            }
+
+            // Menu Action Editor Dialog
+            if (showMenuActionEditor) {
+                MenuActionEditorDialog(
+                    currentActions = menuActions.mapNotNull { OmniTouchAction.fromId(it) },
+                    onDismiss = { showMenuActionEditor = false },
+                    onSave = { actions ->
+                        scope.launch {
+                            viewModel.updateMenuActions(actions.map { it.id })
+                            showMenuActionEditor = false
+                        }
+                    }
+                )
             }
 
             // App Settings Section
@@ -304,4 +332,207 @@ fun SettingsDropdownItem(
             }
         }
     }
+}
+
+/**
+ * Navigation setting item (clickable item that opens another screen/dialog)
+ */
+@Composable
+fun SettingsNavigationItem(
+    label: String,
+    description: String,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Icon(
+            imageVector = Icons.Default.ChevronRight,
+            contentDescription = "Navigate",
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+/**
+ * Dialog for editing menu actions
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MenuActionEditorDialog(
+    currentActions: List<OmniTouchAction>,
+    onDismiss: () -> Unit,
+    onSave: (List<OmniTouchAction>) -> Unit
+) {
+    var selectedActions by remember { mutableStateOf(currentActions.toMutableList()) }
+    var showActionPicker by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = { onSave(selectedActions) }) {
+                Text("Save")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        },
+        title = { Text("Edit Menu Actions") },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = "Selected actions (${selectedActions.size})",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                // List of current actions with delete buttons
+                selectedActions.forEachIndexed { index, action ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(
+                                imageVector = action.icon,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Text(
+                                text = action.displayName,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                        IconButton(
+                            onClick = {
+                                selectedActions = selectedActions.toMutableList().apply {
+                                    removeAt(index)
+                                }
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "Remove",
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
+                }
+
+                // Add action button
+                OutlinedButton(
+                    onClick = { showActionPicker = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Add Action")
+                }
+
+                // Action picker dialog
+                if (showActionPicker) {
+                    ActionPickerDialog(
+                        availableActions = OmniTouchAction.getAllPredefinedActions()
+                            .filter { it.id != "no_action" && it.id != "show_menu" },
+                        onActionSelected = { action ->
+                            if (!selectedActions.any { it.id == action.id }) {
+                                selectedActions = selectedActions.toMutableList().apply {
+                                    add(action)
+                                }
+                            }
+                            showActionPicker = false
+                        },
+                        onDismiss = { showActionPicker = false }
+                    )
+                }
+            }
+        }
+    )
+}
+
+/**
+ * Dialog for picking an action from available actions
+ */
+@Composable
+fun ActionPickerDialog(
+    availableActions: List<OmniTouchAction>,
+    onActionSelected: (OmniTouchAction) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        },
+        title = { Text("Choose Action") },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                availableActions.forEach { action ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onActionSelected(action) }
+                            .padding(vertical = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = action.icon,
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Column {
+                            Text(
+                                text = action.displayName,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            Text(
+                                text = action.description,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    )
 }

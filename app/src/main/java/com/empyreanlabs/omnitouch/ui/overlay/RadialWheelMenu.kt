@@ -155,8 +155,9 @@ fun RadialWheelMenu(
 
 /**
  * Calculate radial menu center position and orientation based on button location.
+ * IMPORTANT: Button should be at the CENTER of the radial menu (like MIUI Quick Ball)
  * Returns Triple(centerX, centerY, orientation)
- * Orientation: 0 = right, 90 = down, 180 = left, 270 = up (in degrees)
+ * Orientation: 0 = right (semicircle opens right), 180 = left (semicircle opens left)
  */
 private fun calculateRadialMenuPosition(
     buttonX: Int,
@@ -168,62 +169,27 @@ private fun calculateRadialMenuPosition(
     density: androidx.compose.ui.unit.Density
 ): Triple<Int, Int, Double> {
     val screenWidthPx = with(density) { screenWidth.dp.toPx() }.toInt()
-    val screenHeightPx = with(density) { screenHeight.dp.toPx() }.toInt()
     val buttonSizePx = with(density) { buttonSize.dp.toPx() }.toInt()
-    val wheelRadiusPx = with(density) { wheelRadius.toPx() }.toInt()
 
-    // Button center
+    // Button center - THIS is the center of the radial menu!
     val buttonCenterX = buttonX + buttonSizePx / 2
     val buttonCenterY = buttonY + buttonSizePx / 2
 
-    // Determine which edge the button is closest to
+    // Determine which edge the button is closest to (left or right)
     val distToLeft = buttonX
     val distToRight = screenWidthPx - buttonX - buttonSizePx
-    val distToTop = buttonY
-    val distToBottom = screenHeightPx - buttonY - buttonSizePx
 
-    val minHorizontalDist = minOf(distToLeft, distToRight)
-    val minVerticalDist = minOf(distToTop, distToBottom)
-
-    // Determine orientation based on button position
-    // Menu should open away from the nearest edge
-    val orientation: Double
-    val centerX: Int
-    val centerY: Int
-
-    if (minHorizontalDist < minVerticalDist) {
-        // Button is closer to left/right edge
-        if (distToLeft < distToRight) {
-            // Button on left - menu opens to the right
-            orientation = 0.0 // 0 degrees (right)
-            // Position menu center to the right of the button, with proper spacing
-            centerX = buttonCenterX + buttonSizePx / 2 + wheelRadiusPx
-            centerY = buttonCenterY
-        } else {
-            // Button on right - menu opens to the left
-            orientation = 180.0 // 180 degrees (left)
-            // Position menu center to the left of the button, with proper spacing
-            centerX = buttonCenterX - buttonSizePx / 2 - wheelRadiusPx
-            centerY = buttonCenterY
-        }
+    // Simple rule: Button on left → menu opens right, Button on right → menu opens left
+    val orientation: Double = if (distToLeft < distToRight) {
+        // Button on left edge - semicircle opens to the RIGHT
+        0.0 // 0 degrees (right)
     } else {
-        // Button is closer to top/bottom edge
-        if (distToTop < distToBottom) {
-            // Button on top - menu opens downward
-            orientation = 90.0 // 90 degrees (down)
-            // Position menu center below the button, with proper spacing
-            centerX = buttonCenterX
-            centerY = buttonCenterY + buttonSizePx / 2 + wheelRadiusPx
-        } else {
-            // Button on bottom - menu opens upward
-            orientation = 270.0 // 270 degrees (up)
-            // Position menu center above the button, with proper spacing
-            centerX = buttonCenterX
-            centerY = buttonCenterY - buttonSizePx / 2 - wheelRadiusPx
-        }
+        // Button on right edge - semicircle opens to the LEFT
+        180.0 // 180 degrees (left)
     }
 
-    return Triple(centerX, centerY, orientation)
+    // Center of radial menu is the button center itself!
+    return Triple(buttonCenterX, buttonCenterY, orientation)
 }
 
 /**

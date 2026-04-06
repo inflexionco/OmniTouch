@@ -167,8 +167,9 @@ fun GridPopupMenu(
 }
 
 /**
- * Calculate optimal menu position based on button location.
- * Menu should appear near the button but stay fully on-screen.
+ * Calculate grid menu position based on button location.
+ * Simple rule: Button on left → menu on right, Button on right → menu on left
+ * Similar to iOS AssistiveTouch behavior
  */
 private fun calculateMenuPosition(
     buttonX: Int,
@@ -195,46 +196,24 @@ private fun calculateMenuPosition(
     val screenHeightPx = with(density) { screenHeight.dp.toPx() }.toInt()
     val buttonSizePx = with(density) { buttonSize.dp.toPx() }.toInt()
 
-    // Determine which edge the button is closest to
+    // Determine which edge the button is closest to (left or right)
     val distToLeft = buttonX
     val distToRight = screenWidthPx - buttonX - buttonSizePx
-    val distToTop = buttonY
-    val distToBottom = screenHeightPx - buttonY - buttonSizePx
 
-    val minHorizontalDist = minOf(distToLeft, distToRight)
-    val minVerticalDist = minOf(distToTop, distToBottom)
-
-    // Default position: try to place menu to the right/left of button
-    var menuX: Int
-    var menuY: Int
-
-    if (minHorizontalDist < minVerticalDist) {
-        // Button is closer to left/right edge - place menu above/below
-        if (distToTop < distToBottom) {
-            // Button is near top - place menu below
-            menuY = buttonY + buttonSizePx + spacing
-        } else {
-            // Button is near bottom - place menu above
-            menuY = buttonY - menuHeight - spacing
-        }
-        // Center menu horizontally relative to button
-        menuX = buttonX + (buttonSizePx / 2) - (menuWidth / 2)
+    // Simple horizontal positioning: Button on left → menu on right, and vice versa
+    val menuX: Int = if (distToLeft < distToRight) {
+        // Button on left edge - place menu to the right
+        buttonX + buttonSizePx + spacing
     } else {
-        // Button is closer to top/bottom edge - place menu to the side
-        if (distToLeft < distToRight) {
-            // Button is near left edge - place menu to the right
-            menuX = buttonX + buttonSizePx + spacing
-        } else {
-            // Button is near right edge - place menu to the left
-            menuX = buttonX - menuWidth - spacing
-        }
-        // Center menu vertically relative to button
-        menuY = buttonY + (buttonSizePx / 2) - (menuHeight / 2)
+        // Button on right edge - place menu to the left
+        buttonX - menuWidth - spacing
     }
 
-    // Ensure menu stays fully on-screen
+    // Center menu vertically relative to button
+    var menuY: Int = buttonY + (buttonSizePx / 2) - (menuHeight / 2)
+
+    // Ensure menu stays fully on-screen (vertical bounds only)
     val margin = with(density) { 16.dp.toPx() }.toInt()
-    menuX = menuX.coerceIn(margin, screenWidthPx - menuWidth - margin)
     menuY = menuY.coerceIn(margin, screenHeightPx - menuHeight - margin)
 
     return Pair(menuX, menuY)

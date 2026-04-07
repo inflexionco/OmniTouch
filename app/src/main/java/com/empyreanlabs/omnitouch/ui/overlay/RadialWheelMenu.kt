@@ -158,6 +158,9 @@ fun RadialWheelMenu(
  * IMPORTANT: Button should be at the CENTER of the radial menu (like MIUI Quick Ball)
  * Returns Triple(centerX, centerY, orientation)
  * Orientation: 0 = right (semicircle opens right), 180 = left (semicircle opens left)
+ *
+ * NOTE: centerX and centerY are returned in COMPOSABLE-LOCAL coordinates (not screen coordinates)
+ * since the menu is rendered in the same Box as the button.
  */
 private fun calculateRadialMenuPosition(
     buttonX: Int,
@@ -171,11 +174,12 @@ private fun calculateRadialMenuPosition(
     val screenWidthPx = with(density) { screenWidth.dp.toPx() }.toInt()
     val buttonSizePx = with(density) { buttonSize.dp.toPx() }.toInt()
 
-    // Button center - THIS is the center of the radial menu!
-    val buttonCenterX = buttonX + buttonSizePx / 2
-    val buttonCenterY = buttonY + buttonSizePx / 2
+    // Button center RELATIVE TO THE COMPOSABLE (the button is at 0,0 in the Box)
+    // So the center is just half the button size from the origin
+    val buttonCenterX = buttonSizePx / 2
+    val buttonCenterY = buttonSizePx / 2
 
-    // Determine which edge the button is closest to (left or right)
+    // Determine which edge the button is closest to (left or right) using screen position
     val distToLeft = buttonX
     val distToRight = screenWidthPx - buttonX - buttonSizePx
 
@@ -188,7 +192,7 @@ private fun calculateRadialMenuPosition(
         180.0 // 180 degrees (left)
     }
 
-    // Center of radial menu is the button center itself!
+    // Center of radial menu is the button center (in composable-local coordinates)
     return Triple(buttonCenterX, buttonCenterY, orientation)
 }
 
@@ -230,13 +234,21 @@ private fun RadialMenuItem(
     actionExecutor: ActionExecutor,
     onClick: () -> Unit
 ) {
+    val density = LocalDensity.current
     val canExecute = remember(action) { actionExecutor.canExecuteAction(action) }
     val itemAlpha = if (canExecute) alpha else alpha * 0.4f
     val itemBackgroundColor = if (canExecute) Color(0xFF2196F3) else Color(0xFF2196F3).copy(alpha = 0.5f)
 
+    // Calculate offset to center the item at (x, y)
+    // The Column is 80dp wide, and the icon + label is approximately 80dp tall
+    val itemWidth = with(density) { 80.dp.toPx() }.toInt()
+    val itemHeight = with(density) { 80.dp.toPx() }.toInt()
+    val centeredX = x - itemWidth / 2
+    val centeredY = y - itemHeight / 2
+
     Box(
         modifier = Modifier
-            .offset { IntOffset(x, y) }
+            .offset { IntOffset(centeredX, centeredY) }
             .alpha(itemAlpha)
     ) {
         Column(

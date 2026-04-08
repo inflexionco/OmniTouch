@@ -87,21 +87,22 @@ fun RadialWheelMenu(
     }
 
     // Calculate center position and orientation
-    val (centerX, centerY, orientation) = calculateRadialMenuPosition(
-        buttonX = buttonX,
-        buttonY = buttonY,
-        buttonSize = buttonSize,
-        screenWidth = screenWidth,
-        screenHeight = screenHeight,
-        wheelRadius = wheelRadius,
-        density = density
-    )
+    // buttonX and buttonY are screen coordinates in the full-screen window
+    val buttonSizePx = with(density) { buttonSize.dp.toPx() }.toInt()
+    val screenWidthPx = with(density) { screenWidth.dp.toPx() }.toInt()
+
+    // Button center in screen/composable coordinates (window is full-screen so they match)
+    val centerX = buttonX + buttonSizePx / 2
+    val centerY = buttonY + buttonSizePx / 2
+
+    // Determine orientation: button on left → open right, button on right → open left
+    val orientation: Double = if (buttonX < screenWidthPx / 2) 0.0 else 180.0
 
     Box(
         modifier = Modifier
             .fillMaxSize()
     ) {
-        // Dimmed background
+        // Dimmed background — captures all touches outside menu items to dismiss
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -151,49 +152,6 @@ fun RadialWheelMenu(
             )
         }
     }
-}
-
-/**
- * Calculate radial menu center position and orientation based on button location.
- * IMPORTANT: Button should be at the CENTER of the radial menu (like MIUI Quick Ball)
- * Returns Triple(centerX, centerY, orientation)
- * Orientation: 0 = right (semicircle opens right), 180 = left (semicircle opens left)
- *
- * NOTE: centerX and centerY are returned in COMPOSABLE-LOCAL coordinates (not screen coordinates)
- * since the menu is rendered in the same Box as the button.
- */
-private fun calculateRadialMenuPosition(
-    buttonX: Int,
-    buttonY: Int,
-    buttonSize: Float,
-    screenWidth: Int,
-    screenHeight: Int,
-    wheelRadius: androidx.compose.ui.unit.Dp,
-    density: androidx.compose.ui.unit.Density
-): Triple<Int, Int, Double> {
-    val screenWidthPx = with(density) { screenWidth.dp.toPx() }.toInt()
-    val buttonSizePx = with(density) { buttonSize.dp.toPx() }.toInt()
-
-    // Button center RELATIVE TO THE COMPOSABLE (the button is at 0,0 in the Box)
-    // So the center is just half the button size from the origin
-    val buttonCenterX = buttonSizePx / 2
-    val buttonCenterY = buttonSizePx / 2
-
-    // Determine which edge the button is closest to (left or right) using screen position
-    val distToLeft = buttonX
-    val distToRight = screenWidthPx - buttonX - buttonSizePx
-
-    // Simple rule: Button on left → menu opens right, Button on right → menu opens left
-    val orientation: Double = if (distToLeft < distToRight) {
-        // Button on left edge - semicircle opens to the RIGHT
-        0.0 // 0 degrees (right)
-    } else {
-        // Button on right edge - semicircle opens to the LEFT
-        180.0 // 180 degrees (left)
-    }
-
-    // Center of radial menu is the button center (in composable-local coordinates)
-    return Triple(buttonCenterX, buttonCenterY, orientation)
 }
 
 /**

@@ -71,6 +71,10 @@ class OverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStat
 
     // Overlay state
     private var isMenuVisible by mutableStateOf(false)
+    private var overlayParams: WindowManager.LayoutParams? = null
+    // Saved button position (in screen coords) used to pass to menus when window goes full-screen
+    private var savedButtonX by mutableStateOf(0)
+    private var savedButtonY by mutableStateOf(0)
 
     companion object {
         private const val NOTIFICATION_ID = 1
@@ -128,22 +132,28 @@ class OverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStat
 
     private fun addFloatingButton() {
         try {
-            // Window layout parameters
+            val overlayType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+            } else {
+                @Suppress("DEPRECATION")
+                WindowManager.LayoutParams.TYPE_PHONE
+            }
+
+            // Flags for button-only mode: small window, touches outside pass through
+            val buttonFlags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+
+            // Flags for menu mode: full-screen, captures all touches to allow dismiss on outside tap
+            val menuFlags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+
+            // Start with button-only params (WRAP_CONTENT, touches pass through)
             val params = WindowManager.LayoutParams(
                 WindowManager.LayoutParams.WRAP_CONTENT,
                 WindowManager.LayoutParams.WRAP_CONTENT,
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-                } else {
-                    @Suppress("DEPRECATION")
-                    WindowManager.LayoutParams.TYPE_PHONE
-                },
-                // FLAG_NOT_FOCUSABLE: Window won't take input focus (system can still interact)
-                // FLAG_NOT_TOUCH_MODAL: Touches outside the button pass through to other windows
-                // FLAG_LAYOUT_NO_LIMITS: Allow positioning outside screen bounds
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                        WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-                        WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+                overlayType,
+                buttonFlags,
                 PixelFormat.TRANSLUCENT
             ).apply {
                 gravity = Gravity.TOP or Gravity.START
@@ -157,6 +167,7 @@ class OverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStat
                     }
                 }
             }
+            overlayParams = params
 
             // Create Compose view
             val view = ComposeView(this).apply {
@@ -187,7 +198,38 @@ class OverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStat
                             layoutParams = params,
                             view = this@apply,
                             onMenuVisibilityChange = { visible ->
+                                if (visible) {
+                                    // Save current button screen position before expanding
+                                    savedButtonX = params.x
+                                    savedButtonY = params.y
+                                }
                                 isMenuVisible = visible
+                                // Expand window to full-screen when menu opens so items are fully
+                                // visible and touches outside the menu area dismiss it.
+                                // Shrink back to WRAP_CONTENT when menu closes.
+                                params.width = if (visible) {
+                                    WindowManager.LayoutParams.MATCH_PARENT
+                                } else {
+                                    WindowManager.LayoutParams.WRAP_CONTENT
+                                }
+                                params.height = if (visible) {
+                                    WindowManager.LayoutParams.MATCH_PARENT
+                                } else {
+                                    WindowManager.LayoutParams.WRAP_CONTENT
+                                }
+                                params.flags = if (visible) menuFlags else buttonFlags
+                                if (visible) {
+                                    // Full-screen: reset x/y to 0 (composable handles positioning)
+                                    params.x = 0
+                                    params.y = 0
+                                } else {
+                                    // Restore the saved button position
+                                    params.x = savedButtonX
+                                    params.y = savedButtonY
+                                }
+                                try {
+                                    windowManager.updateViewLayout(composeView, params)
+                                } catch (_: Exception) {}
                             }
                         )
 
@@ -197,8 +239,8 @@ class OverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStat
                                 MenuLayoutType.GRID -> GridPopupMenu(
                                     settingsRepository = settingsRepository,
                                     actionExecutor = actionExecutor,
-                                    buttonX = params.x,
-                                    buttonY = params.y,
+                                    buttonX = savedButtonX,
+                                    buttonY = savedButtonY,
                                     buttonSize = buttonSize,
                                     onDismiss = {
                                         isMenuVisible = false
@@ -207,8 +249,8 @@ class OverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStat
                                 MenuLayoutType.RADIAL -> RadialWheelMenu(
                                     settingsRepository = settingsRepository,
                                     actionExecutor = actionExecutor,
-                                    buttonX = params.x,
-                                    buttonY = params.y,
+                                    buttonX = savedButtonX,
+                                    buttonY = savedButtonY,
                                     buttonSize = buttonSize,
                                     onDismiss = {
                                         isMenuVisible = false

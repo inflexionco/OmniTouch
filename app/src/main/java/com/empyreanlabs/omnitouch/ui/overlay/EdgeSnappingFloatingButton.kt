@@ -1,13 +1,13 @@
 package com.empyreanlabs.omnitouch.ui.overlay
 
+import android.animation.ValueAnimator
 import android.annotation.SuppressLint
-import android.content.res.Configuration
 import android.view.MotionEvent
 import android.view.WindowManager
-import androidx.compose.animation.core.*
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -24,7 +24,6 @@ import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.empyreanlabs.omnitouch.data.SettingsRepository
 import com.empyreanlabs.omnitouch.model.OmniTouchAction
@@ -32,15 +31,14 @@ import com.empyreanlabs.omnitouch.util.ActionExecutor
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.abs
-import kotlin.math.roundToInt
 
 /**
- * Edge-snapping floating button with move-aside functionality.
- * Features:
- * - Snaps to nearest edge (all 4 sides) with 50dp threshold
- * - Moves aside (semi-transparent + partial off-screen) after 5s inactivity
- * - Smooth animations for snapping and move-aside
- * - Position persistence
+ * Floating button that:
+ *  - Docks exclusively to the left or right vertical edge (never top/bottom, never centre).
+ *  - Drags freely while the finger is down; on release it spring-animates to the nearest edge.
+ *  - Active state: button fully on-screen (x=0 or x=screenWidth-buttonSize).
+ *  - Inactive state: after 5s of no interaction the button slides 50% off the nearest
+ *    horizontal edge (move-aside). A touch anywhere on the visible half restores it.
  */
 @OptIn(ExperimentalComposeUiApi::class)
 @SuppressLint("ClickableViewAccessibility")
@@ -54,14 +52,13 @@ fun EdgeSnappingFloatingButton(
     onMenuVisibilityChange: (Boolean) -> Unit,
     isMenuOpen: Boolean = false
 ) {
-    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val configuration = LocalConfiguration.current
     val density = LocalDensity.current
 
-    // Screen dimensions
-    val screenWidth = configuration.screenWidthDp
-    val screenHeight = configuration.screenHeightDp
+    // Screen dimensions in dp (as reported by the configuration)
+    val screenWidthDp = configuration.screenWidthDp
+    val screenHeightDp = configuration.screenHeightDp
 
     // Button settings
     var buttonSize by remember { mutableFloatStateOf(SettingsRepository.DEFAULT_BUTTON_SIZE) }
@@ -69,9 +66,8 @@ fun EdgeSnappingFloatingButton(
     var singleTapActionId by remember { mutableStateOf(SettingsRepository.DEFAULT_SINGLE_TAP_ACTION) }
     var hapticFeedback by remember { mutableStateOf(SettingsRepository.DEFAULT_HAPTIC_FEEDBACK) }
 
-    // Move-aside settings (hardcoded for now, will be configurable later)
-    val moveAsideEnabled = true
-    val moveAsideDelay = 5000L // 5 seconds
+    // Move-aside constants
+    val moveAsideDelay = 5000L
     val moveAsideOpacity = 0.4f
 
     // Drag state
@@ -86,7 +82,7 @@ fun EdgeSnappingFloatingButton(
     var isMovedAside by remember { mutableStateOf(false) }
     var lastInteractionTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
 
-    // Animation state for opacity
+    // Animated opacity: dim when moved aside
     val targetOpacity = if (isMovedAside) moveAsideOpacity else buttonOpacity
     val animatedOpacity by animateFloatAsState(
         targetValue = targetOpacity,
@@ -102,45 +98,52 @@ fun EdgeSnappingFloatingButton(
         launch { settingsRepository.hapticFeedback.collect { hapticFeedback = it } }
     }
 
-    // Move-aside timer
-    LaunchedEffect(lastInteractionTime, moveAsideEnabled) {
-        if (!moveAsideEnabled) return@LaunchedEffect
-
+    // Move-aside timer — fires when the user hasn't touched the button for moveAsideDelay ms.
+    LaunchedEffect(lastInteractionTime) {
         while (true) {
-            delay(1000) // Check every second
-            val timeSinceInteraction = System.currentTimeMillis() - lastInteractionTime
-            if (timeSinceInteraction >= moveAsideDelay && !isMovedAside && !isDragging) {
+            delay(1000)
+            val elapsed = System.currentTimeMillis() - lastInteractionTime
+            if (elapsed >= moveAsideDelay && !isMovedAside && !isDragging) {
                 isMovedAside = true
-                // Move button partially off-screen based on which edge it's at
-                moveButtonAside(layoutParams, windowManager, view, screenWidth, screenHeight, buttonSize, density)
+                animateToX(
+                    from = layoutParams.x,
+                    to = moveAsideTargetX(layoutParams.x, density, screenWidthDp, buttonSize),
+                    layoutParams = layoutParams,
+                    windowManager = windowManager,
+                    view = view
+                )
             }
         }
     }
 
     /**
-     * Snap button to nearest edge
+     * Animate layoutParams.x from [from] to [to] using a spring-style ValueAnimator.
+     * The button snaps smoothly without any jump.
      */
-    fun snapToEdge(currentX: Int, currentY: Int) {
-        val snapThreshold = with(density) { 50.dp.toPx() }.toInt()
+    fun springSnapToX(from: Int, to: Int) {
+        animateToX(from, to, layoutParams, windowManager, view)
+    }
 
-        // Calculate distances to each edge
-        val distToLeft = currentX
-        val distToRight = with(density) { screenWidth.dp.toPx() }.toInt() - currentX
-        val distToTop = currentY
-        val distToBottom = with(density) { screenHeight.dp.toPx() }.toInt() - currentY
+    /**
+     * On ACTION_UP: snap X to the nearest horizontal edge (left=0, right=screenWidth-buttonSize).
+     * Y is unconstrained. Uses a spring animation.
+     */
+    fun snapToNearestHorizontalEdge() {
+        val screenWidthPx = with(density) { screenWidthDp.dp.toPx() }.toInt()
+        val buttonSizePx = with(density) { buttonSize.dp.toPx() }.toInt()
 
-        // Find minimum distance
-        val minDist = minOf(distToLeft, distToRight, distToTop, distToBottom)
+        val leftEdge = 0
+        val rightEdge = screenWidthPx - buttonSizePx
 
-        // Snap to nearest edge if within threshold
-        if (minDist <= snapThreshold) {
-            when (minDist) {
-                distToLeft -> layoutParams.x = 0
-                distToRight -> layoutParams.x = with(density) { screenWidth.dp.toPx() }.toInt()
-                distToTop -> layoutParams.y = 0
-                distToBottom -> layoutParams.y = with(density) { screenHeight.dp.toPx() }.toInt()
-            }
-            windowManager.updateViewLayout(view, layoutParams)
+        val targetX = if (layoutParams.x <= screenWidthPx / 2 - buttonSizePx / 2) leftEdge else rightEdge
+        springSnapToX(layoutParams.x, targetX)
+
+        // Clamp Y so the button never goes off top or bottom
+        val screenHeightPx = with(density) { screenHeightDp.dp.toPx() }.toInt()
+        val clampedY = layoutParams.y.coerceIn(0, screenHeightPx - buttonSizePx)
+        if (clampedY != layoutParams.y) {
+            layoutParams.y = clampedY
+            try { windowManager.updateViewLayout(view, layoutParams) } catch (_: Exception) {}
         }
     }
 
@@ -160,11 +163,15 @@ fun EdgeSnappingFloatingButton(
                         isDragging = false
                         lastInteractionTime = System.currentTimeMillis()
 
-                        // If moved aside, bring back to full visibility immediately
+                        // Restore from move-aside: animate back to the fully-visible edge position
                         if (isMovedAside) {
                             isMovedAside = false
-                            // Restore position (move back on-screen)
-                            restoreButtonPosition(layoutParams, windowManager, view, buttonSize, density)
+                            val screenWidthPx = with(density) { screenWidthDp.dp.toPx() }.toInt()
+                            val buttonSizePx = with(density) { buttonSize.dp.toPx() }.toInt()
+                            // Determine which edge the button is currently on
+                            val restoredX = if (layoutParams.x < 0) 0 else screenWidthPx - buttonSizePx
+                            springSnapToX(layoutParams.x, restoredX)
+                            initialX = restoredX
                         }
                         true
                     }
@@ -173,39 +180,35 @@ fun EdgeSnappingFloatingButton(
                         val deltaX = event.rawX - initialTouchX
                         val deltaY = event.rawY - initialTouchY
 
-                        // If moved more than threshold, it's a drag
                         if (abs(deltaX) > 10 || abs(deltaY) > 10) {
-                            // Dismiss the menu before dragging so the window collapses
-                            // back to WRAP_CONTENT; otherwise layoutParams.x/y are both 0
-                            // (full-screen window origin) and position will be wrong.
+                            // Dismiss menu before starting a drag so the window is already
+                            // WRAP_CONTENT when we read/write layoutParams.x/y
                             if (!isDragging && isMenuOpen) {
                                 onMenuVisibilityChange(false)
                             }
                             isDragging = true
+                            // Free drag: follow the finger in both axes
                             layoutParams.x = initialX + deltaX.toInt()
                             layoutParams.y = initialY + deltaY.toInt()
-                            windowManager.updateViewLayout(view, layoutParams)
+                            try { windowManager.updateViewLayout(view, layoutParams) } catch (_: Exception) {}
                         }
                         true
                     }
 
-                    MotionEvent.ACTION_UP -> {
+                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                         lastInteractionTime = System.currentTimeMillis()
 
                         if (!isDragging) {
-                            // It's a tap
+                            // Tap logic
                             val currentTime = System.currentTimeMillis()
                             val tapGap = currentTime - lastTapTime
-
-                            // Check for double tap
                             if (tapGap < 300) {
-                                // Double tap - ignore for now
+                                // Double tap — reserved for future use
                                 lastTapTime = 0
                             } else {
-                                // Single tap
                                 lastTapTime = currentTime
                                 scope.launch {
-                                    delay(300) // Wait to see if double tap
+                                    delay(300) // Wait to confirm it's not a double tap
                                     if (lastTapTime == currentTime) {
                                         val action = OmniTouchAction.fromId(singleTapActionId)
                                         if (action != null) {
@@ -219,11 +222,12 @@ fun EdgeSnappingFloatingButton(
                                 }
                             }
                         } else {
-                            // After drag, snap to nearest edge
-                            snapToEdge(layoutParams.x, layoutParams.y)
-
-                            // Save position
+                            // Drag ended: spring-snap to the nearest horizontal edge
+                            snapToNearestHorizontalEdge()
                             scope.launch {
+                                // Small delay so the animation has started before we read the
+                                // final target position for persistence
+                                delay(350)
                                 settingsRepository.updateButtonPosition(layoutParams.x, layoutParams.y)
                             }
                         }
@@ -247,65 +251,47 @@ fun EdgeSnappingFloatingButton(
 }
 
 /**
- * Move button aside (partially off-screen) based on its current position
+ * Calculates the move-aside target X: slides the button 50% off the nearest horizontal edge.
+ * Only left/right edges are considered.
  */
-private fun moveButtonAside(
-    layoutParams: WindowManager.LayoutParams,
-    windowManager: WindowManager,
-    view: android.view.View,
-    screenWidth: Int,
-    screenHeight: Int,
-    buttonSize: Float,
-    density: androidx.compose.ui.unit.Density
-) {
-    val currentX = layoutParams.x
-    val currentY = layoutParams.y
-
-    val screenWidthPx = with(density) { screenWidth.dp.toPx() }.toInt()
-    val screenHeightPx = with(density) { screenHeight.dp.toPx() }.toInt()
+private fun moveAsideTargetX(
+    currentX: Int,
+    density: androidx.compose.ui.unit.Density,
+    screenWidthDp: Int,
+    buttonSize: Float
+): Int {
+    val screenWidthPx = with(density) { screenWidthDp.dp.toPx() }.toInt()
     val buttonSizePx = with(density) { buttonSize.dp.toPx() }.toInt()
+    val halfButton = buttonSizePx / 2
 
-    // Determine which edge the button is closest to
-    val distToLeft = currentX
-    val distToRight = screenWidthPx - currentX
-    val distToTop = currentY
-    val distToBottom = screenHeightPx - currentY
-
-    val minDist = minOf(distToLeft, distToRight, distToTop, distToBottom)
-
-    // Move button partially off-screen (50% visible)
-    val offsetAmount = buttonSizePx / 2
-
-    when (minDist) {
-        distToLeft -> layoutParams.x = -offsetAmount
-        distToRight -> layoutParams.x = screenWidthPx - buttonSizePx + offsetAmount
-        distToTop -> layoutParams.y = -offsetAmount
-        distToBottom -> layoutParams.y = screenHeightPx - buttonSizePx + offsetAmount
+    // Whichever horizontal edge is closest determines which side to hide on
+    return if (currentX <= screenWidthPx / 2 - halfButton) {
+        -halfButton          // Left edge: slide left until 50% hidden
+    } else {
+        screenWidthPx - halfButton  // Right edge: slide right until 50% hidden
     }
-
-    windowManager.updateViewLayout(view, layoutParams)
 }
 
 /**
- * Restore button to full on-screen position
+ * Animates layoutParams.x from [from] to [to] using a spring-style ValueAnimator.
+ * Calls windowManager.updateViewLayout on every animation frame.
  */
-private fun restoreButtonPosition(
+private fun animateToX(
+    from: Int,
+    to: Int,
     layoutParams: WindowManager.LayoutParams,
     windowManager: WindowManager,
-    view: android.view.View,
-    buttonSize: Float,
-    density: androidx.compose.ui.unit.Density
+    view: android.view.View
 ) {
-    val buttonSizePx = with(density) { buttonSize.dp.toPx() }.toInt()
-    val offsetAmount = buttonSizePx / 2
+    if (from == to) return
 
-    // If button is partially off-screen, move it back
-    if (layoutParams.x < 0) {
-        layoutParams.x = 0
+    ValueAnimator.ofInt(from, to).apply {
+        duration = 350L
+        interpolator = android.view.animation.OvershootInterpolator(1.5f)
+        addUpdateListener { animator ->
+            layoutParams.x = animator.animatedValue as Int
+            try { windowManager.updateViewLayout(view, layoutParams) } catch (_: Exception) {}
+        }
+        start()
     }
-    if (layoutParams.y < 0) {
-        layoutParams.y = 0
-    }
-
-    windowManager.updateViewLayout(view, layoutParams)
 }

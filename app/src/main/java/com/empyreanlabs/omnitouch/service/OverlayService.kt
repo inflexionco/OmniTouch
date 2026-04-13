@@ -144,8 +144,9 @@ class OverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStat
                     WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
                     WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
 
-            // Flags for menu mode: full-screen, captures all touches to allow dismiss on outside tap
+            // Flags for menu mode: full-screen, passes system gestures through (dismiss handled by Compose clickable)
             val menuFlags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
                     WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
 
             // Start with button-only params (WRAP_CONTENT, touches pass through)
@@ -189,6 +190,39 @@ class OverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStat
                         }
                     }
 
+                    // Single source of truth for opening/closing the menu window.
+                    // ALL dismiss paths (button tap, outside tap, action selection) must
+                    // go through this lambda so the window is always restored to
+                    // WRAP_CONTENT and buttonFlags when the menu closes.
+                    fun setMenuVisible(visible: Boolean) {
+                        if (visible) {
+                            savedButtonX = params.x
+                            savedButtonY = params.y
+                        }
+                        isMenuVisible = visible
+                        params.width = if (visible) {
+                            WindowManager.LayoutParams.MATCH_PARENT
+                        } else {
+                            WindowManager.LayoutParams.WRAP_CONTENT
+                        }
+                        params.height = if (visible) {
+                            WindowManager.LayoutParams.MATCH_PARENT
+                        } else {
+                            WindowManager.LayoutParams.WRAP_CONTENT
+                        }
+                        params.flags = if (visible) menuFlags else buttonFlags
+                        if (visible) {
+                            params.x = 0
+                            params.y = 0
+                        } else {
+                            params.x = savedButtonX
+                            params.y = savedButtonY
+                        }
+                        try {
+                            windowManager.updateViewLayout(composeView, params)
+                        } catch (_: Exception) {}
+                    }
+
                     Box {
                         // Edge-snapping floating button with move-aside
                         EdgeSnappingFloatingButton(
@@ -197,40 +231,8 @@ class OverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStat
                             windowManager = windowManager,
                             layoutParams = params,
                             view = this@apply,
-                            onMenuVisibilityChange = { visible ->
-                                if (visible) {
-                                    // Save current button screen position before expanding
-                                    savedButtonX = params.x
-                                    savedButtonY = params.y
-                                }
-                                isMenuVisible = visible
-                                // Expand window to full-screen when menu opens so items are fully
-                                // visible and touches outside the menu area dismiss it.
-                                // Shrink back to WRAP_CONTENT when menu closes.
-                                params.width = if (visible) {
-                                    WindowManager.LayoutParams.MATCH_PARENT
-                                } else {
-                                    WindowManager.LayoutParams.WRAP_CONTENT
-                                }
-                                params.height = if (visible) {
-                                    WindowManager.LayoutParams.MATCH_PARENT
-                                } else {
-                                    WindowManager.LayoutParams.WRAP_CONTENT
-                                }
-                                params.flags = if (visible) menuFlags else buttonFlags
-                                if (visible) {
-                                    // Full-screen: reset x/y to 0 (composable handles positioning)
-                                    params.x = 0
-                                    params.y = 0
-                                } else {
-                                    // Restore the saved button position
-                                    params.x = savedButtonX
-                                    params.y = savedButtonY
-                                }
-                                try {
-                                    windowManager.updateViewLayout(composeView, params)
-                                } catch (_: Exception) {}
-                            }
+                            onMenuVisibilityChange = { visible -> setMenuVisible(visible) },
+                            isMenuOpen = isMenuVisible
                         )
 
                         // Show menu overlay when visible (switch between Grid and Radial)
@@ -242,9 +244,7 @@ class OverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStat
                                     buttonX = savedButtonX,
                                     buttonY = savedButtonY,
                                     buttonSize = buttonSize,
-                                    onDismiss = {
-                                        isMenuVisible = false
-                                    }
+                                    onDismiss = { setMenuVisible(false) }
                                 )
                                 MenuLayoutType.RADIAL -> RadialWheelMenu(
                                     settingsRepository = settingsRepository,
@@ -252,9 +252,7 @@ class OverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStat
                                     buttonX = savedButtonX,
                                     buttonY = savedButtonY,
                                     buttonSize = buttonSize,
-                                    onDismiss = {
-                                        isMenuVisible = false
-                                    }
+                                    onDismiss = { setMenuVisible(false) }
                                 )
                             }
                         }

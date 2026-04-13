@@ -51,7 +51,8 @@ fun EdgeSnappingFloatingButton(
     windowManager: WindowManager,
     layoutParams: WindowManager.LayoutParams,
     view: android.view.View,
-    onMenuVisibilityChange: (Boolean) -> Unit
+    onMenuVisibilityChange: (Boolean) -> Unit,
+    isMenuOpen: Boolean = false
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -174,6 +175,12 @@ fun EdgeSnappingFloatingButton(
 
                         // If moved more than threshold, it's a drag
                         if (abs(deltaX) > 10 || abs(deltaY) > 10) {
+                            // Dismiss the menu before dragging so the window collapses
+                            // back to WRAP_CONTENT; otherwise layoutParams.x/y are both 0
+                            // (full-screen window origin) and position will be wrong.
+                            if (!isDragging && isMenuOpen) {
+                                onMenuVisibilityChange(false)
+                            }
                             isDragging = true
                             layoutParams.x = initialX + deltaX.toInt()
                             layoutParams.y = initialY + deltaY.toInt()

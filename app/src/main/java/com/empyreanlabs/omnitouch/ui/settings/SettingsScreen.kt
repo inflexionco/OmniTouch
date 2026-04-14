@@ -15,6 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -139,13 +140,26 @@ fun SettingsScreen(
                     maxLabel = "OPAQUE",
                     onValueChange = { scope.launch { viewModel.updateButtonOpacity(it) } }
                 )
+
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 12.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant
+                )
+
+                SettingsSwitchItem(
+                    label = "Use Custom Icon",
+                    description = "Replace the default accessibility icon",
+                    checked = false,
+                    onCheckedChange = { }
+                )
             }
 
             // ── Button Behavior ─────────────────────────────────────────────
             SettingsSectionCard(
                 title = "Button Behavior",
-                icon = Icons.Default.TouchApp,
-                iconBackground = Color(0xFFE8F5E9)
+                icon = Icons.Default.Swipe,
+                iconBackground = Color(0xFFECEFF1),
+                iconTint = Color(0xFF607D8B)
             ) {
                 SettingsSwitchRow(
                     label = "Auto-Hide on Keyboard",
@@ -194,7 +208,8 @@ fun SettingsScreen(
             SettingsSectionCard(
                 title = "Menu Configuration",
                 icon = Icons.Default.GridView,
-                iconBackground = Color(0xFFE8F5E9)
+                iconBackground = Color(0xFF4CAF50),
+                iconTint = Color.White
             ) {
                 Text(
                     text = "Menu Layout Style",
@@ -260,10 +275,10 @@ fun SettingsScreen(
                     SettingsSliderItem(
                         label = "Grid Columns",
                         value = menuGridSize.toFloat(),
-                        valueRange = 2f..3f,
+                        valueRange = 2f..4f,
                         valueLabel = "${menuGridSize} Columns",
                         onValueChange = { scope.launch { viewModel.updateMenuGridSize(it.toInt()) } },
-                        steps = 1
+                        steps = 2
                     )
                 }
 
@@ -321,58 +336,62 @@ fun SettingsScreen(
                 icon = Icons.Default.Tune,
                 iconBackground = Color(0xFFE3F2FD)
             ) {
-                SettingsIconRow(
-                    icon = Icons.Default.Notifications,
-                    label = "Push Notifications",
-                    trailing = {
-                        Switch(
-                            checked = startOnBoot,
-                            onCheckedChange = { scope.launch { viewModel.updateStartOnBoot(it) } }
-                        )
-                    }
-                )
-
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 4.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant
-                )
-
-                SettingsIconRow(
-                    icon = Icons.Default.Language,
-                    label = "Language",
-                    trailing = {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Text(
-                                text = "English",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                            Icon(
-                                imageVector = Icons.Default.ChevronRight,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(18.dp)
+                // Each row is its own surfaceVariant tile (matches screenshot)
+                AppSettingsTile {
+                    SettingsIconRow(
+                        icon = Icons.Default.Notifications,
+                        label = "Push Notifications",
+                        trailing = {
+                            Switch(
+                                checked = startOnBoot,
+                                onCheckedChange = { scope.launch { viewModel.updateStartOnBoot(it) } }
                             )
                         }
-                    }
-                )
+                    )
+                }
 
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 4.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant
-                )
+                Spacer(Modifier.height(8.dp))
 
-                SettingsIconRow(
-                    icon = Icons.Default.RestartAlt,
-                    label = "Reset All Settings",
-                    labelColor = MaterialTheme.colorScheme.error,
-                    iconTint = MaterialTheme.colorScheme.error,
-                    trailing = { }
-                )
+                AppSettingsTile {
+                    SettingsIconRow(
+                        icon = Icons.Default.Language,
+                        label = "Language",
+                        trailing = {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    text = "English",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Icon(
+                                    imageVector = Icons.Default.ChevronRight,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                    )
+                }
+
+                Spacer(Modifier.height(8.dp))
+
+                AppSettingsTile {
+                    SettingsIconRow(
+                        icon = Icons.Default.RestartAlt,
+                        label = "Reset All Settings",
+                        labelColor = MaterialTheme.colorScheme.error,
+                        iconTint = MaterialTheme.colorScheme.error,
+                        trailing = { }
+                    )
+                }
             }
+
+            // ── Developer Mode dark gradient card ────────────────────────────
+            DeveloperModeCard()
 
             Spacer(Modifier.height(16.dp))
         }
@@ -386,6 +405,7 @@ fun SettingsSectionCard(
     title: String,
     icon: ImageVector,
     iconBackground: Color,
+    iconTint: Color = Color.Unspecified,
     content: @Composable ColumnScope.() -> Unit
 ) {
     Card(
@@ -398,7 +418,6 @@ fun SettingsSectionCard(
             modifier = Modifier.padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(0.dp)
         ) {
-            // Section header: coloured icon badge + bold title
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -412,7 +431,7 @@ fun SettingsSectionCard(
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
+                        tint = if (iconTint == Color.Unspecified) MaterialTheme.colorScheme.primary else iconTint,
                         modifier = Modifier.size(22.dp)
                     )
                 }
@@ -425,6 +444,74 @@ fun SettingsSectionCard(
 
             Spacer(Modifier.height(16.dp))
             content()
+        }
+    }
+}
+
+// ─── App Settings individual tile ────────────────────────────────────────────
+
+@Composable
+private fun AppSettingsTile(content: @Composable () -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+    ) {
+        Box(modifier = Modifier.padding(horizontal = 4.dp)) {
+            content()
+        }
+    }
+}
+
+// ─── Developer Mode dark gradient card ───────────────────────────────────────
+
+@Composable
+private fun DeveloperModeCard() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(
+                Brush.linearGradient(
+                    listOf(Color(0xFF1A1035), Color(0xFF2D1B69), Color(0xFF1A237E))
+                )
+            )
+            .padding(24.dp)
+    ) {
+        // Decorative blurred circle accent
+        Box(
+            modifier = Modifier
+                .size(80.dp)
+                .align(Alignment.BottomEnd)
+                .offset(x = 16.dp, y = 16.dp)
+                .background(Color(0xFF7C4DFF).copy(alpha = 0.35f), RoundedCornerShape(50.dp))
+        )
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .background(Color(0xFF7C4DFF), RoundedCornerShape(50.dp))
+                )
+                Text(
+                    text = "DEVELOPER MODE",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.White.copy(alpha = 0.70f),
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = androidx.compose.ui.unit.TextUnit(
+                        1.5f, androidx.compose.ui.unit.TextUnitType.Sp
+                    )
+                )
+            }
+            Text(
+                text = "Explore Advanced\nConfigurations",
+                style = MaterialTheme.typography.titleLarge,
+                color = Color.White,
+                fontWeight = FontWeight.Bold
+            )
         }
     }
 }

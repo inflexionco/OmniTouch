@@ -6,8 +6,10 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -15,11 +17,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.empyreanlabs.omnitouch.data.SettingsRepository
 import com.empyreanlabs.omnitouch.service.OverlayService
+import com.empyreanlabs.omnitouch.ui.settings.SettingsSliderItem
 import com.empyreanlabs.omnitouch.ui.MainViewModel
 import com.empyreanlabs.omnitouch.ui.settings.SettingsScreen
 import com.empyreanlabs.omnitouch.ui.theme.OmniTouchTheme
@@ -137,11 +140,7 @@ fun MainScreen(
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                    actionIconContentColor = MaterialTheme.colorScheme.onPrimary
-                )
+                colors = TopAppBarDefaults.topAppBarColors()
             )
         }
     ) { paddingValues ->
@@ -189,7 +188,7 @@ fun ServiceStatusCard(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
             containerColor = if (isRunning) {
-                MaterialTheme.colorScheme.primaryContainer
+                MaterialTheme.colorScheme.secondaryContainer
             } else {
                 MaterialTheme.colorScheme.surfaceVariant
             }
@@ -212,6 +211,15 @@ fun ServiceStatusCard(
                         MaterialTheme.colorScheme.onSurfaceVariant
                     }
                 )
+                // Status dot
+                Box(
+                    modifier = Modifier
+                        .size(10.dp)
+                        .background(
+                            color = if (isRunning) Color(0xFF2E7D32) else MaterialTheme.colorScheme.outline,
+                            shape = CircleShape
+                        )
+                )
                 Text(
                     text = if (isRunning) "Service Running" else "Service Stopped",
                     style = MaterialTheme.typography.titleMedium
@@ -221,8 +229,22 @@ fun ServiceStatusCard(
             Button(
                 onClick = if (isRunning) onStop else onStart,
                 modifier = Modifier.fillMaxWidth(),
-                enabled = !isRunning && canStart || isRunning
+                enabled = !isRunning && canStart || isRunning,
+                colors = if (isRunning) {
+                    ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
+                    )
+                } else {
+                    ButtonDefaults.buttonColors()
+                }
             ) {
+                Icon(
+                    imageVector = if (isRunning) Icons.Default.Stop else Icons.Default.PlayArrow,
+                    contentDescription = null,
+                    modifier = Modifier.size(ButtonDefaults.IconSize)
+                )
+                Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
                 Text(if (isRunning) "Stop Service" else "Start Service")
             }
 
@@ -252,6 +274,19 @@ fun PermissionsCard(
             Text(
                 text = "Permissions",
                 style = MaterialTheme.typography.titleMedium
+            )
+            val grantedCount = listOf(
+                permissionState.hasOverlayPermission,
+                permissionState.hasAccessibilityService,
+                permissionState.hasDeviceAdmin
+            ).count { it }
+            Text(
+                text = "Setup: $grantedCount of 3 complete",
+                style = MaterialTheme.typography.bodySmall,
+                color = if (grantedCount == 3)
+                    MaterialTheme.colorScheme.primary
+                else
+                    MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             PermissionItem(
@@ -340,16 +375,12 @@ fun QuickSettingsCard(
                 text = "Quick Settings",
                 style = MaterialTheme.typography.titleMedium
             )
-
-            Text(
-                text = "Button Opacity: ${(buttonOpacity * 100).toInt()}%",
-                style = MaterialTheme.typography.bodyMedium
-            )
-
-            Slider(
+            SettingsSliderItem(
+                label = "Button Opacity",
                 value = buttonOpacity,
-                onValueChange = onOpacityChange,
-                valueRange = 0.3f..1.0f
+                valueRange = 0.3f..1.0f,
+                valueLabel = "${(buttonOpacity * 100).toInt()}%",
+                onValueChange = onOpacityChange
             )
         }
     }

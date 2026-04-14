@@ -63,11 +63,7 @@ fun SettingsScreen(
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
-                )
+                colors = TopAppBarDefaults.topAppBarColors()
             )
         }
     ) { paddingValues ->
@@ -104,11 +100,24 @@ fun SettingsScreen(
 
             // Button Behavior Section
             SettingsSectionCard(title = "Button Behavior") {
-                Text(
-                    text = "Edge snapping and move-aside are always enabled",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                var showEdgeSnapInfo by remember { mutableStateOf(false) }
+                AssistChip(
+                    onClick = { showEdgeSnapInfo = true },
+                    label = { Text("Edge snapping: Always on") },
+                    leadingIcon = {
+                        Icon(Icons.Default.Info, contentDescription = null, modifier = Modifier.size(18.dp))
+                    }
                 )
+                if (showEdgeSnapInfo) {
+                    AlertDialog(
+                        onDismissRequest = { showEdgeSnapInfo = false },
+                        confirmButton = {
+                            TextButton(onClick = { showEdgeSnapInfo = false }) { Text("Got it") }
+                        },
+                        title = { Text("Edge Snapping") },
+                        text = { Text("The floating button always snaps to the nearest screen edge and moves aside automatically when it overlaps content. This cannot be disabled.") }
+                    )
+                }
             }
 
             // Menu Configuration Section
@@ -196,7 +205,7 @@ fun SettingsSectionCard(
     title: String,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)

@@ -1,8 +1,11 @@
 package com.empyreanlabs.omnitouch.ui.settings
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -11,22 +14,17 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.empyreanlabs.omnitouch.data.SettingsRepository
 import com.empyreanlabs.omnitouch.model.MenuLayoutType
 import com.empyreanlabs.omnitouch.model.OmniTouchAction
 import com.empyreanlabs.omnitouch.ui.MainViewModel
 import kotlinx.coroutines.launch
 
-/**
- * Comprehensive settings screen for Omni Touch customization.
- * Organized into sections:
- * - Button Appearance (size, opacity, color)
- * - Button Behavior (edge snapping, move-aside, tap actions)
- * - Menu Configuration (layout type, grid size, actions)
- * - App Settings (start on boot, haptic feedback)
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
@@ -35,26 +33,37 @@ fun SettingsScreen(
 ) {
     val scope = rememberCoroutineScope()
 
-    // Button settings
-    val buttonSize by viewModel.buttonSize.collectAsStateWithLifecycle()
-    val buttonOpacity by viewModel.buttonOpacity.collectAsStateWithLifecycle()
+    val buttonSize      by viewModel.buttonSize.collectAsStateWithLifecycle()
+    val buttonOpacity   by viewModel.buttonOpacity.collectAsStateWithLifecycle()
+    val menuLayoutType  by viewModel.menuLayoutType.collectAsStateWithLifecycle()
+    val menuGridSize    by viewModel.menuGridSize.collectAsStateWithLifecycle()
+    val menuActions     by viewModel.menuActions.collectAsStateWithLifecycle()
+    val startOnBoot     by viewModel.startOnBoot.collectAsStateWithLifecycle()
+    val hapticFeedback  by viewModel.hapticFeedback.collectAsStateWithLifecycle()
 
-    // Menu settings
-    val menuLayoutType by viewModel.menuLayoutType.collectAsStateWithLifecycle()
-    val menuGridSize by viewModel.menuGridSize.collectAsStateWithLifecycle()
-    val menuActions by viewModel.menuActions.collectAsStateWithLifecycle()
-
-    // App settings
-    val startOnBoot by viewModel.startOnBoot.collectAsStateWithLifecycle()
-    val hapticFeedback by viewModel.hapticFeedback.collectAsStateWithLifecycle()
-
-    // Menu action editor dialog state
     var showMenuActionEditor by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Settings") },
+                title = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Accessibility,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(22.dp)
+                        )
+                        Text(
+                            text = "Omni Touch",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
@@ -62,6 +71,14 @@ fun SettingsScreen(
                             contentDescription = "Back"
                         )
                     }
+                },
+                actions = {
+                    Icon(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(end = 16.dp).size(22.dp)
+                    )
                 },
                 colors = TopAppBarDefaults.topAppBarColors()
             )
@@ -71,42 +88,95 @@ fun SettingsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(16.dp)
+                .padding(horizontal = 16.dp)
                 .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            // Button Appearance Section
-            SettingsSectionCard(title = "Button Appearance") {
-                // Button Size
+            // Large title header (matches screen 3 design)
+            Column(
+                modifier = Modifier.padding(top = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    text = "Omni Touch Settings",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Customize your floating assistant experience",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            // ── Button Appearance ───────────────────────────────────────────
+            SettingsSectionCard(
+                title = "Button Appearance",
+                icon = Icons.Default.Palette,
+                iconBackground = Color(0xFFEDE7F6)
+            ) {
                 SettingsSliderItem(
                     label = "Button Size",
                     value = buttonSize,
                     valueRange = 40f..80f,
                     valueLabel = "${buttonSize.toInt()}dp",
+                    minLabel = "SMALL",
+                    maxLabel = "LARGE",
                     onValueChange = { scope.launch { viewModel.updateButtonSize(it) } }
                 )
 
-                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 12.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant
+                )
 
-                // Button Opacity
                 SettingsSliderItem(
-                    label = "Button Opacity",
+                    label = "Idle Opacity",
                     value = buttonOpacity,
                     valueRange = 0.3f..1.0f,
                     valueLabel = "${(buttonOpacity * 100).toInt()}%",
+                    minLabel = "TRANSPARENT",
+                    maxLabel = "OPAQUE",
                     onValueChange = { scope.launch { viewModel.updateButtonOpacity(it) } }
                 )
             }
 
-            // Button Behavior Section
-            SettingsSectionCard(title = "Button Behavior") {
+            // ── Button Behavior ─────────────────────────────────────────────
+            SettingsSectionCard(
+                title = "Button Behavior",
+                icon = Icons.Default.TouchApp,
+                iconBackground = Color(0xFFE8F5E9)
+            ) {
+                SettingsSwitchRow(
+                    label = "Auto-Hide on Keyboard",
+                    description = "Hide button when typing",
+                    checked = false,
+                    onCheckedChange = { }
+                )
+
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 4.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant
+                )
+
+                SettingsSwitchRow(
+                    label = "Stick to Edges",
+                    description = "Always snap to the nearest side",
+                    checked = true,
+                    onCheckedChange = { }
+                )
+
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 4.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant
+                )
+
                 var showEdgeSnapInfo by remember { mutableStateOf(false) }
-                AssistChip(
-                    onClick = { showEdgeSnapInfo = true },
-                    label = { Text("Edge snapping: Always on") },
-                    leadingIcon = {
-                        Icon(Icons.Default.Info, contentDescription = null, modifier = Modifier.size(18.dp))
-                    }
+                SettingsDropdownItem(
+                    label = "Long Press Action",
+                    value = "Toggle Menu Visibility",
+                    options = listOf("Toggle Menu Visibility", "Show Quick Actions", "None"),
+                    onValueChange = { }
                 )
                 if (showEdgeSnapInfo) {
                     AlertDialog(
@@ -120,46 +190,118 @@ fun SettingsScreen(
                 }
             }
 
-            // Menu Configuration Section
-            SettingsSectionCard(title = "Menu Configuration") {
-                // Menu Layout Type
-                SettingsDropdownItem(
-                    label = "Menu Layout",
-                    value = menuLayoutType.displayName,
-                    options = MenuLayoutType.entries.map { it.displayName },
-                    onValueChange = { displayName ->
-                        val layoutType = MenuLayoutType.entries.find { it.displayName == displayName }
-                        if (layoutType != null) {
-                            scope.launch { viewModel.updateMenuLayoutType(layoutType) }
-                        }
-                    }
+            // ── Menu Configuration ───────────────────────────────────────────
+            SettingsSectionCard(
+                title = "Menu Configuration",
+                icon = Icons.Default.GridView,
+                iconBackground = Color(0xFFE8F5E9)
+            ) {
+                Text(
+                    text = "Menu Layout Style",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium
                 )
 
-                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                Spacer(Modifier.height(8.dp))
 
-                // Grid Size (only for Grid layout)
+                // Segmented-style layout selector
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    MenuLayoutType.entries.forEach { type ->
+                        val selected = menuLayoutType == type
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(12.dp))
+                                .border(
+                                    width = if (selected) 2.dp else 1.dp,
+                                    color = if (selected) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.outlineVariant,
+                                    shape = RoundedCornerShape(12.dp)
+                                )
+                                .background(
+                                    if (selected) MaterialTheme.colorScheme.primaryContainer
+                                    else MaterialTheme.colorScheme.surface
+                                )
+                                .clickable {
+                                    scope.launch { viewModel.updateMenuLayoutType(type) }
+                                }
+                                .padding(vertical = 14.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = if (type == MenuLayoutType.GRID)
+                                        Icons.Default.GridView else Icons.Default.ViewList,
+                                    contentDescription = null,
+                                    tint = if (selected) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Text(
+                                    text = type.displayName.uppercase(),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (selected) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+
                 if (menuLayoutType == MenuLayoutType.GRID) {
+                    Spacer(Modifier.height(12.dp))
                     SettingsSliderItem(
                         label = "Grid Columns",
                         value = menuGridSize.toFloat(),
                         valueRange = 2f..3f,
-                        valueLabel = "$menuGridSize columns",
+                        valueLabel = "${menuGridSize} Columns",
                         onValueChange = { scope.launch { viewModel.updateMenuGridSize(it.toInt()) } },
                         steps = 1
                     )
-
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                 }
 
-                // Menu Actions Editor
-                SettingsNavigationItem(
-                    label = "Menu Actions",
-                    description = "${menuActions.size} actions configured",
-                    onClick = { showMenuActionEditor = true }
-                )
+                Spacer(Modifier.height(12.dp))
+
+                // Dashed "Rearrange Shortcuts" button
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .border(
+                            width = 1.5.dp,
+                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                            shape = RoundedCornerShape(10.dp)
+                        )
+                        .clickable { showMenuActionEditor = true }
+                        .padding(vertical = 14.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = "Rearrange Shortcuts",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
 
-            // Menu Action Editor Dialog
             if (showMenuActionEditor) {
                 MenuActionEditorDialog(
                     currentActions = menuActions.mapNotNull { OmniTouchAction.fromId(it) },
@@ -173,57 +315,122 @@ fun SettingsScreen(
                 )
             }
 
-            // App Settings Section
-            SettingsSectionCard(title = "App Settings") {
-                // Start on Boot
-                SettingsSwitchItem(
-                    label = "Start on Boot",
-                    description = "Automatically start service when device boots",
-                    checked = startOnBoot,
-                    onCheckedChange = { scope.launch { viewModel.updateStartOnBoot(it) } }
+            // ── App Settings ────────────────────────────────────────────────
+            SettingsSectionCard(
+                title = "App Settings",
+                icon = Icons.Default.Tune,
+                iconBackground = Color(0xFFE3F2FD)
+            ) {
+                SettingsIconRow(
+                    icon = Icons.Default.Notifications,
+                    label = "Push Notifications",
+                    trailing = {
+                        Switch(
+                            checked = startOnBoot,
+                            onCheckedChange = { scope.launch { viewModel.updateStartOnBoot(it) } }
+                        )
+                    }
                 )
 
-                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 4.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant
+                )
 
-                // Haptic Feedback
-                SettingsSwitchItem(
-                    label = "Haptic Feedback",
-                    description = "Vibrate when actions are executed",
-                    checked = hapticFeedback,
-                    onCheckedChange = { scope.launch { viewModel.updateHapticFeedback(it) } }
+                SettingsIconRow(
+                    icon = Icons.Default.Language,
+                    label = "Language",
+                    trailing = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = "English",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Icon(
+                                imageVector = Icons.Default.ChevronRight,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+                )
+
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 4.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant
+                )
+
+                SettingsIconRow(
+                    icon = Icons.Default.RestartAlt,
+                    label = "Reset All Settings",
+                    labelColor = MaterialTheme.colorScheme.error,
+                    iconTint = MaterialTheme.colorScheme.error,
+                    trailing = { }
                 )
             }
+
+            Spacer(Modifier.height(16.dp))
         }
     }
 }
 
-/**
- * Card wrapper for settings section
- */
+// ─── Section Card ─────────────────────────────────────────────────────────────
+
 @Composable
 fun SettingsSectionCard(
     title: String,
+    icon: ImageVector,
+    iconBackground: Color,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(0.dp)
         ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary
-            )
-            Spacer(modifier = Modifier.height(4.dp))
+            // Section header: coloured icon badge + bold title
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(iconBackground, RoundedCornerShape(12.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Spacer(Modifier.height(16.dp))
             content()
         }
     }
 }
 
-/**
- * Slider setting item with label and value display
- */
+// ─── Slider Item with min/max labels ─────────────────────────────────────────
+
 @Composable
 fun SettingsSliderItem(
     label: String,
@@ -231,36 +438,59 @@ fun SettingsSliderItem(
     valueRange: ClosedFloatingPointRange<Float>,
     valueLabel: String,
     onValueChange: (Float) -> Unit,
-    steps: Int = 0
+    steps: Int = 0,
+    minLabel: String? = null,
+    maxLabel: String? = null
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodyMedium
-            )
-            Text(
-                text = valueLabel,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.primary
-            )
+            Text(text = label, style = MaterialTheme.typography.bodyMedium)
+            Surface(
+                shape = RoundedCornerShape(6.dp),
+                color = MaterialTheme.colorScheme.primaryContainer
+            ) {
+                Text(
+                    text = valueLabel,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
         }
         Slider(
             value = value,
             onValueChange = onValueChange,
             valueRange = valueRange,
-            steps = steps
+            steps = steps,
+            modifier = Modifier.fillMaxWidth()
         )
+        if (minLabel != null && maxLabel != null) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = minLabel,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = maxLabel,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
     }
 }
 
-/**
- * Switch setting item with label and description
- */
+// ─── Switch row ───────────────────────────────────────────────────────────────
+
 @Composable
 fun SettingsSwitchItem(
     label: String,
@@ -274,26 +504,60 @@ fun SettingsSwitchItem(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodyMedium
-            )
+            Text(text = label, style = MaterialTheme.typography.bodyMedium)
             Text(
                 text = description,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange
-        )
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }
 
-/**
- * Dropdown setting item with label
- */
+@Composable
+private fun SettingsSwitchRow(
+    label: String,
+    description: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) = SettingsSwitchItem(label, description, checked, onCheckedChange)
+
+// ─── Icon-leading row (App Settings style) ────────────────────────────────────
+
+@Composable
+private fun SettingsIconRow(
+    icon: ImageVector,
+    label: String,
+    labelColor: Color = Color.Unspecified,
+    iconTint: Color = Color.Unspecified,
+    trailing: @Composable () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = if (iconTint == Color.Unspecified) MaterialTheme.colorScheme.onSurfaceVariant else iconTint,
+            modifier = Modifier.size(20.dp)
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = if (labelColor == Color.Unspecified) MaterialTheme.colorScheme.onSurface else labelColor,
+            modifier = Modifier.weight(1f)
+        )
+        trailing()
+    }
+}
+
+// ─── Dropdown ─────────────────────────────────────────────────────────────────
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsDropdownItem(
@@ -305,10 +569,7 @@ fun SettingsDropdownItem(
     var expanded by remember { mutableStateOf(false) }
 
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium
-        )
+        Text(text = label, style = MaterialTheme.typography.bodyMedium)
         ExposedDropdownMenuBox(
             expanded = expanded,
             onExpandedChange = { expanded = !expanded }
@@ -317,25 +578,15 @@ fun SettingsDropdownItem(
                 value = value,
                 onValueChange = {},
                 readOnly = true,
-                trailingIcon = {
-                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .menuAnchor(),
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                modifier = Modifier.fillMaxWidth().menuAnchor(),
                 colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
             )
-            ExposedDropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false }
-            ) {
+            ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                 options.forEach { option ->
                     DropdownMenuItem(
                         text = { Text(option) },
-                        onClick = {
-                            onValueChange(option)
-                            expanded = false
-                        }
+                        onClick = { onValueChange(option); expanded = false }
                     )
                 }
             }
@@ -343,9 +594,8 @@ fun SettingsDropdownItem(
     }
 }
 
-/**
- * Navigation setting item (clickable item that opens another screen/dialog)
- */
+// ─── Navigation Item ─────────────────────────────────────────────────────────
+
 @Composable
 fun SettingsNavigationItem(
     label: String,
@@ -361,10 +611,7 @@ fun SettingsNavigationItem(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodyMedium
-            )
+            Text(text = label, style = MaterialTheme.typography.bodyMedium)
             Text(
                 text = description,
                 style = MaterialTheme.typography.bodySmall,
@@ -379,9 +626,8 @@ fun SettingsNavigationItem(
     }
 }
 
-/**
- * Dialog for editing menu actions
- */
+// ─── Menu Action Editor Dialog ────────────────────────────────────────────────
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MenuActionEditorDialog(
@@ -395,14 +641,10 @@ fun MenuActionEditorDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
-            TextButton(onClick = { onSave(selectedActions) }) {
-                Text("Save")
-            }
+            TextButton(onClick = { onSave(selectedActions) }) { Text("Save") }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
+            TextButton(onClick = onDismiss) { Text("Cancel") }
         },
         title = { Text("Edit Menu Actions") },
         text = {
@@ -415,8 +657,6 @@ fun MenuActionEditorDialog(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-
-                // List of current actions with delete buttons
                 selectedActions.forEachIndexed { index, action ->
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -428,56 +668,28 @@ fun MenuActionEditorDialog(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.weight(1f)
                         ) {
-                            Icon(
-                                imageVector = action.icon,
-                                contentDescription = null,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Text(
-                                text = action.displayName,
-                                style = MaterialTheme.typography.bodyMedium
-                            )
+                            Icon(imageVector = action.icon, contentDescription = null, modifier = Modifier.size(20.dp))
+                            Text(text = action.displayName, style = MaterialTheme.typography.bodyMedium)
                         }
-                        IconButton(
-                            onClick = {
-                                selectedActions = selectedActions.toMutableList().apply {
-                                    removeAt(index)
-                                }
-                            }
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Delete,
-                                contentDescription = "Remove",
-                                tint = MaterialTheme.colorScheme.error
-                            )
+                        IconButton(onClick = {
+                            selectedActions = selectedActions.toMutableList().apply { removeAt(index) }
+                        }) {
+                            Icon(Icons.Default.Delete, contentDescription = "Remove", tint = MaterialTheme.colorScheme.error)
                         }
                     }
                 }
-
-                // Add action button
-                OutlinedButton(
-                    onClick = { showActionPicker = true },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
+                OutlinedButton(onClick = { showActionPicker = true }, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
                     Text("Add Action")
                 }
-
-                // Action picker dialog
                 if (showActionPicker) {
                     ActionPickerDialog(
                         availableActions = OmniTouchAction.getAllPredefinedActions()
                             .filter { it.id != "no_action" && it.id != "show_menu" },
                         onActionSelected = { action ->
                             if (!selectedActions.any { it.id == action.id }) {
-                                selectedActions = selectedActions.toMutableList().apply {
-                                    add(action)
-                                }
+                                selectedActions = selectedActions.toMutableList().apply { add(action) }
                             }
                             showActionPicker = false
                         },
@@ -489,9 +701,8 @@ fun MenuActionEditorDialog(
     )
 }
 
-/**
- * Dialog for picking an action from available actions
- */
+// ─── Action Picker Dialog ─────────────────────────────────────────────────────
+
 @Composable
 fun ActionPickerDialog(
     availableActions: List<OmniTouchAction>,
@@ -501,17 +712,11 @@ fun ActionPickerDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = {},
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
         title = { Text("Choose Action") },
         text = {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState()),
+                modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 availableActions.forEach { action ->
@@ -523,16 +728,9 @@ fun ActionPickerDialog(
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = action.icon,
-                            contentDescription = null,
-                            modifier = Modifier.size(24.dp)
-                        )
+                        Icon(imageVector = action.icon, contentDescription = null, modifier = Modifier.size(24.dp))
                         Column {
-                            Text(
-                                text = action.displayName,
-                                style = MaterialTheme.typography.bodyMedium
-                            )
+                            Text(text = action.displayName, style = MaterialTheme.typography.bodyMedium)
                             Text(
                                 text = action.description,
                                 style = MaterialTheme.typography.bodySmall,

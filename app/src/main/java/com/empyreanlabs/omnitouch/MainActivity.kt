@@ -1,7 +1,6 @@
 package com.empyreanlabs.omnitouch
 
 import android.app.Activity
-import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -10,6 +9,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -17,43 +17,37 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.empyreanlabs.omnitouch.service.OverlayService
-import com.empyreanlabs.omnitouch.ui.settings.SettingsSliderItem
 import com.empyreanlabs.omnitouch.ui.MainViewModel
 import com.empyreanlabs.omnitouch.ui.settings.SettingsScreen
+import com.empyreanlabs.omnitouch.ui.settings.SettingsSliderItem
 import com.empyreanlabs.omnitouch.ui.theme.OmniTouchTheme
 import com.empyreanlabs.omnitouch.util.PermissionUtils
 import dagger.hilt.android.AndroidEntryPoint
 
-/**
- * Main configuration activity for Omni Touch.
- * Handles permission setup and provides access to settings.
- */
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
     private val overlayPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
-    ) {
-        // Permission result handled in UI
-    }
+    ) { }
 
     private val accessibilityPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
-    ) {
-        // Permission result handled in UI
-    }
+    ) { }
 
     private val deviceAdminLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            // Device admin activated
-        }
+        if (result.resultCode == Activity.RESULT_OK) { }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -95,9 +89,7 @@ class MainActivity : ComponentActivity() {
                                     OverlayService.start(this)
                                 }
                             },
-                            onStopService = {
-                                OverlayService.stop(this)
-                            },
+                            onStopService = { OverlayService.stop(this) },
                             onNavigateToSettings = { showSettings = true }
                         )
                     }
@@ -108,10 +100,17 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        // Refresh permission states when returning from settings
-        // The polling in ViewModel will pick up changes within 1 second
     }
 }
+
+// ─── Colours matching the design reference ────────────────────────────────────
+private val ServiceGreen       = Color(0xFF1B6B2F)   // hero card bg running
+private val ServiceGreenLight  = Color(0xFF2E7D32)   // hero card bg lighter edge
+private val ServiceStopped     = Color(0xFF455A64)   // hero card bg stopped
+private val ServiceStoppedEdge = Color(0xFF546E7A)
+private val GrantedGreen       = Color(0xFF2E7D32)
+private val EnabledPill        = Color(0xFFEDE7F6)
+private val IgnoredGreen       = Color(0xFF2E7D32)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -125,19 +124,34 @@ fun MainScreen(
     onNavigateToSettings: () -> Unit
 ) {
     val permissionState by viewModel.permissionState.collectAsStateWithLifecycle()
-    val buttonOpacity by viewModel.buttonOpacity.collectAsStateWithLifecycle()
+    val buttonOpacity   by viewModel.buttonOpacity.collectAsStateWithLifecycle()
     val isServiceRunning by viewModel.isServiceRunning.collectAsStateWithLifecycle()
+    val hapticFeedback  by viewModel.hapticFeedback.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Omni Touch") },
+                title = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Accessibility,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(22.dp)
+                        )
+                        Text(
+                            text = "Omni Touch",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                },
                 actions = {
                     IconButton(onClick = onNavigateToSettings) {
-                        Icon(
-                            imageVector = Icons.Default.Settings,
-                            contentDescription = "Settings"
-                        )
+                        Icon(Icons.Default.Settings, contentDescription = "Settings")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors()
@@ -148,11 +162,12 @@ fun MainScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(16.dp)
+                .padding(horizontal = 16.dp)
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Service Status Card
+            Spacer(Modifier.height(4.dp))
+
             ServiceStatusCard(
                 isRunning = isServiceRunning,
                 canStart = permissionState.hasOverlayPermission,
@@ -160,7 +175,6 @@ fun MainScreen(
                 onStop = onStopService
             )
 
-            // Permissions Card
             PermissionsCard(
                 permissionState = permissionState,
                 onRequestOverlay = onRequestOverlayPermission,
@@ -168,14 +182,19 @@ fun MainScreen(
                 onRequestDeviceAdmin = onRequestDeviceAdmin
             )
 
-            // Quick Settings Card
             QuickSettingsCard(
                 buttonOpacity = buttonOpacity,
-                onOpacityChange = { viewModel.updateButtonOpacity(it) }
+                hapticFeedback = hapticFeedback,
+                onOpacityChange = { viewModel.updateButtonOpacity(it) },
+                onHapticChange = { viewModel.updateHapticFeedback(it) }
             )
+
+            Spacer(Modifier.height(8.dp))
         }
     }
 }
+
+// ─── Service Status Hero Card ──────────────────────────────────────────────────
 
 @Composable
 fun ServiceStatusCard(
@@ -184,80 +203,112 @@ fun ServiceStatusCard(
     onStart: () -> Unit,
     onStop: () -> Unit
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isRunning) {
-                MaterialTheme.colorScheme.secondaryContainer
-            } else {
-                MaterialTheme.colorScheme.surfaceVariant
-            }
-        )
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Icon(
-                    imageVector = if (isRunning) Icons.Default.CheckCircle else Icons.Default.Cancel,
-                    contentDescription = null,
-                    tint = if (isRunning) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    }
-                )
-                // Status dot
-                Box(
-                    modifier = Modifier
-                        .size(10.dp)
-                        .background(
-                            color = if (isRunning) Color(0xFF2E7D32) else MaterialTheme.colorScheme.outline,
-                            shape = CircleShape
-                        )
-                )
-                Text(
-                    text = if (isRunning) "Service Running" else "Service Stopped",
-                    style = MaterialTheme.typography.titleMedium
-                )
-            }
+    val gradientColors = if (isRunning) {
+        listOf(ServiceGreen, ServiceGreenLight)
+    } else {
+        listOf(ServiceStopped, ServiceStoppedEdge)
+    }
 
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(Brush.linearGradient(gradientColors))
+    ) {
+        // Decorative large semi-transparent circle (top-right)
+        Box(
+            modifier = Modifier
+                .size(130.dp)
+                .align(Alignment.TopEnd)
+                .offset(x = 20.dp, y = (-16).dp)
+                .background(Color.White.copy(alpha = 0.10f), CircleShape)
+        )
+        Box(
+            modifier = Modifier
+                .size(90.dp)
+                .align(Alignment.TopEnd)
+                .offset(x = ((-8)).dp, y = 12.dp)
+                .background(Color.White.copy(alpha = 0.10f), CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = if (isRunning) Icons.Default.CheckCircle else Icons.Default.Cancel,
+                contentDescription = null,
+                tint = Color.White.copy(alpha = 0.85f),
+                modifier = Modifier.size(44.dp)
+            )
+        }
+
+        // Text + button content
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 20.dp, top = 20.dp, bottom = 20.dp, end = 120.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Text(
+                text = "SYSTEM STATUS",
+                style = MaterialTheme.typography.labelSmall,
+                color = Color.White.copy(alpha = 0.75f),
+                fontWeight = FontWeight.Bold,
+                letterSpacing = androidx.compose.ui.unit.TextUnit(
+                    1.5f, androidx.compose.ui.unit.TextUnitType.Sp
+                )
+            )
+            Text(
+                text = if (isRunning) "Service Started" else "Service Stopped",
+                style = MaterialTheme.typography.headlineMedium,
+                color = Color.White,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = if (isRunning)
+                    "Omni Touch is currently active and monitoring for gesture commands."
+                else
+                    "Start the service to enable the floating assistant button.",
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.White.copy(alpha = 0.80f)
+            )
+
+            Spacer(Modifier.height(8.dp))
+
+            // Pill button
             Button(
                 onClick = if (isRunning) onStop else onStart,
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !isRunning && canStart || isRunning,
-                colors = if (isRunning) {
-                    ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error,
-                        contentColor = MaterialTheme.colorScheme.onError
-                    )
-                } else {
-                    ButtonDefaults.buttonColors()
-                }
+                enabled = isRunning || canStart,
+                shape = RoundedCornerShape(50.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color.White,
+                    contentColor = if (isRunning) ServiceGreen else ServiceStopped,
+                    disabledContainerColor = Color.White.copy(alpha = 0.4f),
+                    disabledContentColor = Color.White
+                ),
+                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp)
             ) {
                 Icon(
                     imageVector = if (isRunning) Icons.Default.Stop else Icons.Default.PlayArrow,
                     contentDescription = null,
-                    modifier = Modifier.size(ButtonDefaults.IconSize)
+                    modifier = Modifier.size(18.dp)
                 )
-                Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
-                Text(if (isRunning) "Stop Service" else "Start Service")
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = if (isRunning) "Stop Service" else "Start Service",
+                    fontWeight = FontWeight.SemiBold
+                )
             }
 
             if (!canStart && !isRunning) {
                 Text(
                     text = "Enable overlay permission to start",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.White.copy(alpha = 0.75f)
                 )
             }
         }
     }
 }
+
+// ─── Permissions Card ─────────────────────────────────────────────────────────
 
 @Composable
 fun PermissionsCard(
@@ -266,50 +317,50 @@ fun PermissionsCard(
     onRequestAccessibility: () -> Unit,
     onRequestDeviceAdmin: () -> Unit
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text(
-                text = "Permissions",
-                style = MaterialTheme.typography.titleMedium
-            )
-            val grantedCount = listOf(
-                permissionState.hasOverlayPermission,
-                permissionState.hasAccessibilityService,
-                permissionState.hasDeviceAdmin
-            ).count { it }
-            Text(
-                text = "Setup: $grantedCount of 3 complete",
-                style = MaterialTheme.typography.bodySmall,
-                color = if (grantedCount == 3)
-                    MaterialTheme.colorScheme.primary
-                else
-                    MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            // Header row with icon badge
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                SectionIconBadge(
+                    icon = Icons.Default.Shield,
+                    backgroundColor = MaterialTheme.colorScheme.primaryContainer
+                )
+                Text(
+                    text = "Permissions",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
             PermissionItem(
-                title = "Overlay Permission",
-                description = "Required to display floating button",
-                isGranted = permissionState.hasOverlayPermission,
-                isRequired = true,
-                onRequest = onRequestOverlay
-            )
-
-            PermissionItem(
-                title = "Accessibility Service",
-                description = "Required for system actions",
+                title = "Accessibility",
                 isGranted = permissionState.hasAccessibilityService,
-                isRequired = true,
+                statusLabel = if (permissionState.hasAccessibilityService) "GRANTED" else null,
                 onRequest = onRequestAccessibility
             )
-
+            PermissionItem(
+                title = "Overlay",
+                isGranted = permissionState.hasOverlayPermission,
+                statusLabel = null,
+                onRequest = onRequestOverlay
+            )
             PermissionItem(
                 title = "Device Admin",
-                description = "Required for lock screen action",
                 isGranted = permissionState.hasDeviceAdmin,
-                isRequired = false,
+                statusLabel = if (permissionState.hasDeviceAdmin) "IGNORED" else null,
                 onRequest = onRequestDeviceAdmin
             )
         }
@@ -319,9 +370,8 @@ fun PermissionsCard(
 @Composable
 fun PermissionItem(
     title: String,
-    description: String,
     isGranted: Boolean,
-    isRequired: Boolean,
+    statusLabel: String?,
     onRequest: () -> Unit
 ) {
     Row(
@@ -329,52 +379,95 @@ fun PermissionItem(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(text = title, style = MaterialTheme.typography.bodyMedium)
-                if (isRequired) {
-                    Text(
-                        text = " *",
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.weight(1f)
+        ) {
+            // Filled circle icon — green check or red X
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .background(
+                        color = if (isGranted) GrantedGreen else MaterialTheme.colorScheme.errorContainer,
+                        shape = CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = if (isGranted) Icons.Default.Check else Icons.Default.Close,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(16.dp)
+                )
             }
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Text(text = title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
         }
 
-        if (isGranted) {
-            Icon(
-                imageVector = Icons.Default.Check,
-                contentDescription = "Granted",
-                tint = MaterialTheme.colorScheme.primary
+        // Right-side badge / button
+        if (isGranted && statusLabel != null) {
+            Text(
+                text = statusLabel,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                color = if (statusLabel == "IGNORED") IgnoredGreen else GrantedGreen
             )
-        } else {
-            OutlinedButton(onClick = onRequest) {
-                Text("Enable")
+        } else if (!isGranted) {
+            Surface(
+                onClick = onRequest,
+                shape = RoundedCornerShape(50.dp),
+                color = EnabledPill
+            ) {
+                Text(
+                    text = "ENABLE",
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
             }
         }
     }
 }
 
+// ─── Quick Settings Card ──────────────────────────────────────────────────────
+
 @Composable
 fun QuickSettingsCard(
     buttonOpacity: Float,
-    onOpacityChange: (Float) -> Unit
+    hapticFeedback: Boolean,
+    onOpacityChange: (Float) -> Unit,
+    onHapticChange: (Boolean) -> Unit
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text(
-                text = "Quick Settings",
-                style = MaterialTheme.typography.titleMedium
-            )
+            // Header
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                SectionIconBadge(
+                    icon = Icons.Default.Tune,
+                    backgroundColor = MaterialTheme.colorScheme.secondaryContainer
+                )
+                Text(
+                    text = "Quick Settings",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
+            // Opacity slider with inline value label
             SettingsSliderItem(
                 label = "Button Opacity",
                 value = buttonOpacity,
@@ -382,6 +475,53 @@ fun QuickSettingsCard(
                 valueLabel = "${(buttonOpacity * 100).toInt()}%",
                 onValueChange = onOpacityChange
             )
+
+            // Vibration Feedback toggle row
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Vibration Feedback",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Switch(
+                        checked = hapticFeedback,
+                        onCheckedChange = onHapticChange
+                    )
+                }
+            }
         }
+    }
+}
+
+// ─── Shared: Section icon badge ───────────────────────────────────────────────
+
+@Composable
+fun SectionIconBadge(
+    icon: ImageVector,
+    backgroundColor: Color
+) {
+    Box(
+        modifier = Modifier
+            .size(40.dp)
+            .background(backgroundColor, RoundedCornerShape(12.dp)),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(22.dp)
+        )
     }
 }

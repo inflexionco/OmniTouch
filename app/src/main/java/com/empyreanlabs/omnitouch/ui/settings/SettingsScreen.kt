@@ -1,5 +1,7 @@
 package com.empyreanlabs.omnitouch.ui.settings
 
+import android.content.Intent
+import android.provider.Settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -18,6 +20,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -34,16 +37,29 @@ fun SettingsScreen(
     onNavigateBack: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
 
-    val buttonSize      by viewModel.buttonSize.collectAsStateWithLifecycle()
-    val buttonOpacity   by viewModel.buttonOpacity.collectAsStateWithLifecycle()
-    val menuLayoutType  by viewModel.menuLayoutType.collectAsStateWithLifecycle()
-    val menuGridSize    by viewModel.menuGridSize.collectAsStateWithLifecycle()
-    val menuActions     by viewModel.menuActions.collectAsStateWithLifecycle()
-    val startOnBoot     by viewModel.startOnBoot.collectAsStateWithLifecycle()
-    val hapticFeedback  by viewModel.hapticFeedback.collectAsStateWithLifecycle()
+    // FIX 3 – collect all 6 new flows
+    val buttonSize         by viewModel.buttonSize.collectAsStateWithLifecycle()
+    val buttonOpacity      by viewModel.buttonOpacity.collectAsStateWithLifecycle()
+    val menuLayoutType     by viewModel.menuLayoutType.collectAsStateWithLifecycle()
+    val menuGridSize       by viewModel.menuGridSize.collectAsStateWithLifecycle()
+    val menuActions        by viewModel.menuActions.collectAsStateWithLifecycle()
+    val startOnBoot        by viewModel.startOnBoot.collectAsStateWithLifecycle()
+    val hapticFeedback     by viewModel.hapticFeedback.collectAsStateWithLifecycle()
+    val useCustomIcon      by viewModel.useCustomIcon.collectAsStateWithLifecycle()
+    val autoHideOnKeyboard by viewModel.autoHideOnKeyboard.collectAsStateWithLifecycle()
+    val stickToEdges       by viewModel.stickToEdges.collectAsStateWithLifecycle()
+    val longPressAction    by viewModel.longPressAction.collectAsStateWithLifecycle()
+    val pushNotifications  by viewModel.pushNotifications.collectAsStateWithLifecycle()
+    val appLanguage        by viewModel.appLanguage.collectAsStateWithLifecycle()
+
+    // FIX 6 – draft state for opacity: avoids per-frame DataStore writes
+    var opacityDraft by remember(buttonOpacity) { mutableFloatStateOf(buttonOpacity) }
 
     var showMenuActionEditor by remember { mutableStateOf(false) }
+    var showResetDialog      by remember { mutableStateOf(false) }
+    var developerModeEnabled by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -75,7 +91,7 @@ fun SettingsScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            // Large title header (matches screen 3 design)
+            // Large title header
             Column(
                 modifier = Modifier.padding(top = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -113,14 +129,16 @@ fun SettingsScreen(
                     color = MaterialTheme.colorScheme.outlineVariant
                 )
 
+                // FIX 6 – draft state: update UI immediately, persist only on release
                 SettingsSliderItem(
                     label = "Idle Opacity",
-                    value = buttonOpacity,
+                    value = opacityDraft,
                     valueRange = 0.3f..1.0f,
-                    valueLabel = "${(buttonOpacity * 100).toInt()}%",
+                    valueLabel = "${(opacityDraft * 100).toInt()}%",
                     minLabel = "TRANSPARENT",
                     maxLabel = "OPAQUE",
-                    onValueChange = { scope.launch { viewModel.updateButtonOpacity(it) } }
+                    onValueChange = { opacityDraft = it },
+                    onValueChangeFinished = { scope.launch { viewModel.updateButtonOpacity(opacityDraft) } }
                 )
 
                 HorizontalDivider(
@@ -128,11 +146,12 @@ fun SettingsScreen(
                     color = MaterialTheme.colorScheme.outlineVariant
                 )
 
+                // FIX 5 – wire Use Custom Icon to real state
                 SettingsSwitchItem(
                     label = "Use Custom Icon",
                     description = "Replace the default accessibility icon",
-                    checked = false,
-                    onCheckedChange = { }
+                    checked = useCustomIcon,
+                    onCheckedChange = { scope.launch { viewModel.updateUseCustomIcon(it) } }
                 )
             }
 
@@ -143,11 +162,12 @@ fun SettingsScreen(
                 iconBackground = Color(0xFFECEFF1),
                 iconTint = Color(0xFF607D8B)
             ) {
+                // FIX 4 – wire Auto-Hide to real state
                 SettingsSwitchRow(
                     label = "Auto-Hide on Keyboard",
                     description = "Hide button when typing",
-                    checked = false,
-                    onCheckedChange = { }
+                    checked = autoHideOnKeyboard,
+                    onCheckedChange = { scope.launch { viewModel.updateAutoHideOnKeyboard(it) } }
                 )
 
                 HorizontalDivider(
@@ -155,11 +175,12 @@ fun SettingsScreen(
                     color = MaterialTheme.colorScheme.outlineVariant
                 )
 
+                // FIX 4 – wire Stick to Edges to real state
                 SettingsSwitchRow(
                     label = "Stick to Edges",
                     description = "Always snap to the nearest side",
-                    checked = true,
-                    onCheckedChange = { }
+                    checked = stickToEdges,
+                    onCheckedChange = { scope.launch { viewModel.updateStickToEdges(it) } }
                 )
 
                 HorizontalDivider(
@@ -167,23 +188,22 @@ fun SettingsScreen(
                     color = MaterialTheme.colorScheme.outlineVariant
                 )
 
-                var showEdgeSnapInfo by remember { mutableStateOf(false) }
+                // FIX 4 – wire Long Press Action dropdown to real state
+                val allActions = remember {
+                    OmniTouchAction.getAllPredefinedActions().filter { it.id != "show_menu" }
+                }
+                val currentActionDisplay = remember(longPressAction) {
+                    OmniTouchAction.fromId(longPressAction)?.displayName ?: "No Action"
+                }
                 SettingsDropdownItem(
                     label = "Long Press Action",
-                    value = "Toggle Menu Visibility",
-                    options = listOf("Toggle Menu Visibility", "Show Quick Actions", "None"),
-                    onValueChange = { }
+                    value = currentActionDisplay,
+                    options = allActions.map { it.displayName },
+                    onValueChange = { displayName ->
+                        val action = allActions.find { it.displayName == displayName }
+                        action?.let { scope.launch { viewModel.updateLongPressAction(it.id) } }
+                    }
                 )
-                if (showEdgeSnapInfo) {
-                    AlertDialog(
-                        onDismissRequest = { showEdgeSnapInfo = false },
-                        confirmButton = {
-                            TextButton(onClick = { showEdgeSnapInfo = false }) { Text("Got it") }
-                        },
-                        title = { Text("Edge Snapping") },
-                        text = { Text("The floating button always snaps to the nearest screen edge and moves aside automatically when it overlaps content. This cannot be disabled.") }
-                    )
-                }
             }
 
             // ── Menu Configuration ───────────────────────────────────────────
@@ -318,15 +338,15 @@ fun SettingsScreen(
                 icon = Icons.Default.Tune,
                 iconBackground = Color(0xFFE3F2FD)
             ) {
-                // Each row is its own surfaceVariant tile (matches screenshot)
+                // FIX 7 – wire Push Notifications to real state
                 AppSettingsTile {
                     SettingsIconRow(
                         icon = Icons.Default.Notifications,
                         label = "Push Notifications",
                         trailing = {
                             Switch(
-                                checked = startOnBoot,
-                                onCheckedChange = { scope.launch { viewModel.updateStartOnBoot(it) } }
+                                checked = pushNotifications,
+                                onCheckedChange = { scope.launch { viewModel.updatePushNotifications(it) } }
                             )
                         }
                     )
@@ -334,7 +354,16 @@ fun SettingsScreen(
 
                 Spacer(Modifier.height(8.dp))
 
-                AppSettingsTile {
+                // FIX 7 – Language row opens system locale settings
+                AppSettingsTile(
+                    onClick = {
+                        context.startActivity(
+                            Intent(Settings.ACTION_LOCALE_SETTINGS).apply {
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                        )
+                    }
+                ) {
                     SettingsIconRow(
                         icon = Icons.Default.Language,
                         label = "Language",
@@ -344,7 +373,7 @@ fun SettingsScreen(
                                 horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
                                 Text(
-                                    text = "English",
+                                    text = appLanguage,
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.primary
                                 )
@@ -361,7 +390,8 @@ fun SettingsScreen(
 
                 Spacer(Modifier.height(8.dp))
 
-                AppSettingsTile {
+                // FIX 7 – Reset triggers confirmation dialog
+                AppSettingsTile(onClick = { showResetDialog = true }) {
                     SettingsIconRow(
                         icon = Icons.Default.RestartAlt,
                         label = "Reset All Settings",
@@ -372,8 +402,33 @@ fun SettingsScreen(
                 }
             }
 
-            // ── Developer Mode dark gradient card ────────────────────────────
-            DeveloperModeCard()
+            // FIX 7 – Reset confirmation dialog
+            if (showResetDialog) {
+                AlertDialog(
+                    onDismissRequest = { showResetDialog = false },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                viewModel.resetAllSettings()
+                                showResetDialog = false
+                            }
+                        ) {
+                            Text("Reset", color = MaterialTheme.colorScheme.error)
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showResetDialog = false }) { Text("Cancel") }
+                    },
+                    title = { Text("Reset All Settings?") },
+                    text = { Text("All settings will be restored to their defaults. This cannot be undone.") }
+                )
+            }
+
+            // FIX 8 – Developer Mode card with toggle
+            DeveloperModeCard(
+                enabled = developerModeEnabled,
+                onToggle = { developerModeEnabled = it }
+            )
 
             Spacer(Modifier.height(16.dp))
         }
@@ -433,9 +488,14 @@ fun SettingsSectionCard(
 // ─── App Settings individual tile ────────────────────────────────────────────
 
 @Composable
-private fun AppSettingsTile(content: @Composable () -> Unit) {
+private fun AppSettingsTile(
+    onClick: (() -> Unit)? = null,
+    content: @Composable () -> Unit
+) {
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
         shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
     ) {
@@ -447,8 +507,12 @@ private fun AppSettingsTile(content: @Composable () -> Unit) {
 
 // ─── Developer Mode dark gradient card ───────────────────────────────────────
 
+// FIX 8 – toggle-enabled variant
 @Composable
-private fun DeveloperModeCard() {
+private fun DeveloperModeCard(
+    enabled: Boolean,
+    onToggle: (Boolean) -> Unit
+) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -468,31 +532,51 @@ private fun DeveloperModeCard() {
                 .offset(x = 16.dp, y = 16.dp)
                 .background(Color(0xFF7C4DFF).copy(alpha = 0.35f), RoundedCornerShape(50.dp))
         )
-        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(8.dp)
-                        .background(Color(0xFF7C4DFF), RoundedCornerShape(50.dp))
-                )
-                Text(
-                    text = "DEVELOPER MODE",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Color.White.copy(alpha = 0.70f),
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = androidx.compose.ui.unit.TextUnit(
-                        1.5f, androidx.compose.ui.unit.TextUnitType.Sp
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .background(Color(0xFF7C4DFF), RoundedCornerShape(50.dp))
                     )
+                    Text(
+                        text = "DEVELOPER MODE",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.White.copy(alpha = 0.70f),
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = androidx.compose.ui.unit.TextUnit(
+                            1.5f, androidx.compose.ui.unit.TextUnitType.Sp
+                        )
+                    )
+                }
+                Text(
+                    text = "Explore Advanced\nConfigurations",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
                 )
             }
-            Text(
-                text = "Explore Advanced\nConfigurations",
-                style = MaterialTheme.typography.titleLarge,
-                color = Color.White,
-                fontWeight = FontWeight.Bold
+            Switch(
+                checked = enabled,
+                onCheckedChange = onToggle,
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = Color.White,
+                    checkedTrackColor = Color(0xFF7C4DFF),
+                    uncheckedThumbColor = Color.White.copy(alpha = 0.7f),
+                    uncheckedTrackColor = Color.White.copy(alpha = 0.2f),
+                    uncheckedBorderColor = Color.White.copy(alpha = 0.3f)
+                )
             )
         }
     }
@@ -500,6 +584,7 @@ private fun DeveloperModeCard() {
 
 // ─── Slider Item with min/max labels ─────────────────────────────────────────
 
+// FIX 6 – added onValueChangeFinished optional param
 @Composable
 fun SettingsSliderItem(
     label: String,
@@ -507,6 +592,7 @@ fun SettingsSliderItem(
     valueRange: ClosedFloatingPointRange<Float>,
     valueLabel: String,
     onValueChange: (Float) -> Unit,
+    onValueChangeFinished: (() -> Unit)? = null,
     steps: Int = 0,
     minLabel: String? = null,
     maxLabel: String? = null
@@ -534,6 +620,7 @@ fun SettingsSliderItem(
         Slider(
             value = value,
             onValueChange = onValueChange,
+            onValueChangeFinished = onValueChangeFinished,
             valueRange = valueRange,
             steps = steps,
             modifier = Modifier.fillMaxWidth()

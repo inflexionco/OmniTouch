@@ -49,6 +49,17 @@ class SettingsRepository @Inject constructor(
         val START_ON_BOOT = booleanPreferencesKey("start_on_boot")
         val HAPTIC_FEEDBACK = booleanPreferencesKey("haptic_feedback")
         val FIRST_LAUNCH = booleanPreferencesKey("first_launch")
+
+        // Button Appearance
+        val USE_CUSTOM_ICON = booleanPreferencesKey("use_custom_icon")
+
+        // Button Behavior
+        val AUTO_HIDE_ON_KEYBOARD = booleanPreferencesKey("auto_hide_on_keyboard")
+        val STICK_TO_EDGES = booleanPreferencesKey("stick_to_edges")
+
+        // App Preferences
+        val PUSH_NOTIFICATIONS = booleanPreferencesKey("push_notifications")
+        val APP_LANGUAGE = stringPreferencesKey("app_language")
     }
 
     // Default Values
@@ -158,6 +169,29 @@ class SettingsRepository @Inject constructor(
             preferences[PreferenceKeys.FIRST_LAUNCH] ?: DEFAULT_FIRST_LAUNCH
         }
 
+    // Button Appearance Flows
+    val useCustomIcon: Flow<Boolean> = dataStore.data
+        .catch { handleException(it) }
+        .map { preferences -> preferences[PreferenceKeys.USE_CUSTOM_ICON] ?: false }
+
+    // Button Behavior Flows
+    val autoHideOnKeyboard: Flow<Boolean> = dataStore.data
+        .catch { handleException(it) }
+        .map { preferences -> preferences[PreferenceKeys.AUTO_HIDE_ON_KEYBOARD] ?: false }
+
+    val stickToEdges: Flow<Boolean> = dataStore.data
+        .catch { handleException(it) }
+        .map { preferences -> preferences[PreferenceKeys.STICK_TO_EDGES] ?: true }
+
+    // App Preference Flows
+    val pushNotifications: Flow<Boolean> = dataStore.data
+        .catch { handleException(it) }
+        .map { preferences -> preferences[PreferenceKeys.PUSH_NOTIFICATIONS] ?: true }
+
+    val appLanguage: Flow<String> = dataStore.data
+        .catch { handleException(it) }
+        .map { preferences -> preferences[PreferenceKeys.APP_LANGUAGE] ?: "English" }
+
     // Update functions
     suspend fun updateButtonSize(size: Float) {
         dataStore.edit { preferences ->
@@ -230,6 +264,30 @@ class SettingsRepository @Inject constructor(
         dataStore.edit { preferences ->
             preferences[PreferenceKeys.FIRST_LAUNCH] = false
         }
+    }
+
+    suspend fun updateUseCustomIcon(enabled: Boolean) {
+        dataStore.edit { preferences -> preferences[PreferenceKeys.USE_CUSTOM_ICON] = enabled }
+    }
+
+    suspend fun updateAutoHideOnKeyboard(enabled: Boolean) {
+        dataStore.edit { preferences -> preferences[PreferenceKeys.AUTO_HIDE_ON_KEYBOARD] = enabled }
+    }
+
+    suspend fun updateStickToEdges(enabled: Boolean) {
+        dataStore.edit { preferences -> preferences[PreferenceKeys.STICK_TO_EDGES] = enabled }
+    }
+
+    suspend fun updatePushNotifications(enabled: Boolean) {
+        dataStore.edit { preferences -> preferences[PreferenceKeys.PUSH_NOTIFICATIONS] = enabled }
+    }
+
+    suspend fun updateAppLanguage(language: String) {
+        dataStore.edit { preferences -> preferences[PreferenceKeys.APP_LANGUAGE] = language }
+    }
+
+    suspend fun resetAllSettings() {
+        dataStore.edit { it.clear() }
     }
 
     private fun handleException(exception: Throwable): Preferences {

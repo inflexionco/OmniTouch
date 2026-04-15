@@ -107,6 +107,51 @@ class MainViewModel @Inject constructor(
             initialValue = SettingsRepository.DEFAULT_HAPTIC_FEEDBACK
         )
 
+    // Button appearance
+    val useCustomIcon: StateFlow<Boolean> = settingsRepository.useCustomIcon
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = false
+        )
+
+    // Button behavior
+    val autoHideOnKeyboard: StateFlow<Boolean> = settingsRepository.autoHideOnKeyboard
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = false
+        )
+
+    val stickToEdges: StateFlow<Boolean> = settingsRepository.stickToEdges
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = true
+        )
+
+    val longPressAction: StateFlow<String> = settingsRepository.longPressAction
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = SettingsRepository.DEFAULT_LONG_PRESS_ACTION
+        )
+
+    // App preferences
+    val pushNotifications: StateFlow<Boolean> = settingsRepository.pushNotifications
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = true
+        )
+
+    val appLanguage: StateFlow<String> = settingsRepository.appLanguage
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = "English"
+        )
+
     // Update button settings
     fun updateButtonOpacity(opacity: Float) {
         viewModelScope.launch {
@@ -150,5 +195,33 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             settingsRepository.updateHapticFeedback(enabled)
         }
+    }
+
+    fun updateUseCustomIcon(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.updateUseCustomIcon(enabled) }
+    }
+
+    fun updateAutoHideOnKeyboard(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.updateAutoHideOnKeyboard(enabled) }
+    }
+
+    fun updateStickToEdges(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.updateStickToEdges(enabled) }
+    }
+
+    fun updateLongPressAction(actionId: String) {
+        viewModelScope.launch { settingsRepository.updateLongPressAction(actionId) }
+    }
+
+    fun updatePushNotifications(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.updatePushNotifications(enabled) }
+    }
+
+    fun updateAppLanguage(language: String) {
+        viewModelScope.launch { settingsRepository.updateAppLanguage(language) }
+    }
+
+    fun resetAllSettings() {
+        viewModelScope.launch { settingsRepository.resetAllSettings() }
     }
 }

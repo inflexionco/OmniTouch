@@ -123,10 +123,8 @@ fun MainScreen(
     onStopService: () -> Unit,
     onNavigateToSettings: () -> Unit
 ) {
-    val permissionState by viewModel.permissionState.collectAsStateWithLifecycle()
-    val buttonOpacity   by viewModel.buttonOpacity.collectAsStateWithLifecycle()
+    val permissionState  by viewModel.permissionState.collectAsStateWithLifecycle()
     val isServiceRunning by viewModel.isServiceRunning.collectAsStateWithLifecycle()
-    val hapticFeedback  by viewModel.hapticFeedback.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -180,13 +178,6 @@ fun MainScreen(
                 onRequestOverlay = onRequestOverlayPermission,
                 onRequestAccessibility = onRequestAccessibilityPermission,
                 onRequestDeviceAdmin = onRequestDeviceAdmin
-            )
-
-            QuickSettingsCard(
-                buttonOpacity = buttonOpacity,
-                hapticFeedback = hapticFeedback,
-                onOpacityChange = { viewModel.updateButtonOpacity(it) },
-                onHapticChange = { viewModel.updateHapticFeedback(it) }
             )
 
             Spacer(Modifier.height(8.dp))
@@ -323,11 +314,7 @@ fun PermissionsCard(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            // Header row with icon badge
+        Column(modifier = Modifier.padding(20.dp)) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -343,24 +330,32 @@ fun PermissionsCard(
                 )
             }
 
+            Spacer(Modifier.height(16.dp))
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            Spacer(Modifier.height(16.dp))
 
             PermissionItem(
                 title = "Accessibility",
+                description = "Required for system actions",
                 isGranted = permissionState.hasAccessibilityService,
-                statusLabel = if (permissionState.hasAccessibilityService) "GRANTED" else null,
                 onRequest = onRequestAccessibility
             )
+            Spacer(Modifier.height(12.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            Spacer(Modifier.height(12.dp))
             PermissionItem(
                 title = "Overlay",
+                description = "Required to display floating button",
                 isGranted = permissionState.hasOverlayPermission,
-                statusLabel = null,
                 onRequest = onRequestOverlay
             )
+            Spacer(Modifier.height(12.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            Spacer(Modifier.height(12.dp))
             PermissionItem(
                 title = "Device Admin",
+                description = "Required for lock screen action",
                 isGranted = permissionState.hasDeviceAdmin,
-                statusLabel = if (permissionState.hasDeviceAdmin) "IGNORED" else null,
                 onRequest = onRequestDeviceAdmin
             )
         }
@@ -370,26 +365,29 @@ fun PermissionsCard(
 @Composable
 fun PermissionItem(
     title: String,
+    description: String,
     isGranted: Boolean,
-    statusLabel: String?,
     onRequest: () -> Unit
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(IntrinsicSize.Min),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
     ) {
+        // Left: circle icon + text column
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.weight(1f)
         ) {
-            // Filled circle icon — green check or red X
             Box(
                 modifier = Modifier
-                    .size(28.dp)
+                    .size(32.dp)
                     .background(
-                        color = if (isGranted) GrantedGreen else MaterialTheme.colorScheme.errorContainer,
+                        color = if (isGranted) GrantedGreen
+                                else MaterialTheme.colorScheme.errorContainer,
                         shape = CircleShape
                     ),
                 contentAlignment = Alignment.Center
@@ -401,30 +399,46 @@ fun PermissionItem(
                     modifier = Modifier.size(16.dp)
                 )
             }
-            Text(text = title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+            Column {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium
+                )
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
 
-        // Right-side badge / button
-        if (isGranted && statusLabel != null) {
-            Text(
-                text = statusLabel,
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Bold,
-                color = if (statusLabel == "IGNORED") IgnoredGreen else GrantedGreen
-            )
-        } else if (!isGranted) {
-            Surface(
-                onClick = onRequest,
-                shape = RoundedCornerShape(50.dp),
-                color = EnabledPill
-            ) {
+        // Right: fixed-height box keeps GRANTED text and ENABLE pill vertically centred
+        Box(
+            modifier = Modifier.height(32.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            if (isGranted) {
                 Text(
-                    text = "ENABLE",
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                    text = "GRANTED",
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
+                    color = GrantedGreen
                 )
+            } else {
+                Surface(
+                    onClick = onRequest,
+                    shape = RoundedCornerShape(50.dp),
+                    color = EnabledPill
+                ) {
+                    Text(
+                        text = "ENABLE",
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
         }
     }

@@ -24,6 +24,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.empyreanlabs.omnitouch.model.MenuLayoutType
 import com.empyreanlabs.omnitouch.model.OmniTouchAction
 import com.empyreanlabs.omnitouch.ui.MainViewModel
+import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -48,22 +49,11 @@ fun SettingsScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Accessibility,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(22.dp)
-                        )
-                        Text(
-                            text = "Omni Touch",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
+                    Text(
+                        text = "Settings",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold
+                    )
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
@@ -72,14 +62,6 @@ fun SettingsScreen(
                             contentDescription = "Back"
                         )
                     }
-                },
-                actions = {
-                    Icon(
-                        imageVector = Icons.Default.Settings,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(end = 16.dp).size(22.dp)
-                    )
                 },
                 colors = TopAppBarDefaults.topAppBarColors()
             )
@@ -275,9 +257,9 @@ fun SettingsScreen(
                     SettingsSliderItem(
                         label = "Grid Columns",
                         value = menuGridSize.toFloat(),
-                        valueRange = 2f..4f,
-                        valueLabel = "${menuGridSize} Columns",
-                        onValueChange = { scope.launch { viewModel.updateMenuGridSize(it.toInt()) } },
+                        valueRange = 1f..4f,
+                        valueLabel = "$menuGridSize Columns",
+                        onValueChange = { scope.launch { viewModel.updateMenuGridSize(it.roundToInt()) } },
                         steps = 2
                     )
                 }
@@ -457,7 +439,7 @@ private fun AppSettingsTile(content: @Composable () -> Unit) {
         shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
     ) {
-        Box(modifier = Modifier.padding(horizontal = 4.dp)) {
+        Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
             content()
         }
     }

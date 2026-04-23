@@ -9,7 +9,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -203,7 +202,7 @@ fun ServiceStatusCard(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
+            .clip(MaterialTheme.shapes.extraLarge)
             .background(Brush.linearGradient(gradientColors))
     ) {
         // Decorative large semi-transparent circle (top-right)
@@ -267,7 +266,7 @@ fun ServiceStatusCard(
             Button(
                 onClick = if (isRunning) onStop else onStart,
                 enabled = isRunning || canStart,
-                shape = RoundedCornerShape(50.dp),
+                shape = CircleShape,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color.White,
                     contentColor = if (isRunning) ServiceGreen else ServiceStopped,
@@ -310,7 +309,7 @@ fun PermissionsCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        shape = MaterialTheme.shapes.extraLarge,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
@@ -428,7 +427,7 @@ fun PermissionItem(
             } else {
                 Surface(
                     onClick = onRequest,
-                    shape = RoundedCornerShape(50.dp),
+                    shape = CircleShape,
                     color = EnabledPill
                 ) {
                     Text(
@@ -455,7 +454,7 @@ fun QuickSettingsCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        shape = MaterialTheme.shapes.extraLarge,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
@@ -492,7 +491,7 @@ fun QuickSettingsCard(
 
             // Vibration Feedback toggle row
             Surface(
-                shape = RoundedCornerShape(12.dp),
+                shape = MaterialTheme.shapes.medium,
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -528,7 +527,7 @@ fun SectionIconBadge(
     Box(
         modifier = Modifier
             .size(40.dp)
-            .background(backgroundColor, RoundedCornerShape(12.dp)),
+            .background(backgroundColor, MaterialTheme.shapes.medium),
         contentAlignment = Alignment.Center
     ) {
         Icon(

@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -64,11 +65,14 @@ fun RadialWheelMenu(
     val itemSize = 56.dp
     val dimLevel = 0.15f // Reduced from 0.5f to barely visible
 
-    // Animation state
+    // Animation state — spring for expressive entry
     var isVisible by remember { mutableStateOf(false) }
     val animatedAlpha by animateFloatAsState(
         targetValue = if (isVisible) 1f else 0f,
-        animationSpec = tween(durationMillis = 200),
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
         label = "menu_alpha"
     )
 
@@ -195,10 +199,17 @@ private fun RadialMenuItem(
     val density = LocalDensity.current
     val canExecute = remember(action) { actionExecutor.canExecuteAction(action) }
     val itemAlpha = if (canExecute) alpha else alpha * 0.4f
-    val itemBackgroundColor = if (canExecute) Color(0xFF2196F3) else Color(0xFF2196F3).copy(alpha = 0.5f)
+    // Use MaterialTheme primary/primaryContainer tokens instead of hardcoded blue
+    val itemBackgroundColor = if (canExecute)
+        MaterialTheme.colorScheme.primaryContainer
+    else
+        MaterialTheme.colorScheme.surfaceVariant
+    val itemIconColor = if (canExecute)
+        MaterialTheme.colorScheme.onPrimaryContainer
+    else
+        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+    val itemLabelColor = MaterialTheme.colorScheme.onSurface
 
-    // Calculate offset to center the item at (x, y)
-    // The Column is 80dp wide, and the icon + label is approximately 80dp tall
     val itemWidth = with(density) { 80.dp.toPx() }.toInt()
     val itemHeight = with(density) { 80.dp.toPx() }.toInt()
     val centeredX = x - itemWidth / 2
@@ -213,7 +224,6 @@ private fun RadialMenuItem(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.width(80.dp)
         ) {
-            // Icon button
             Box(
                 modifier = Modifier
                     .size(itemSize)
@@ -226,21 +236,20 @@ private fun RadialMenuItem(
                 Icon(
                     imageVector = action.icon,
                     contentDescription = action.displayName,
-                    tint = Color.White.copy(alpha = if (canExecute) 1f else 0.6f),
+                    tint = itemIconColor,
                     modifier = Modifier.size(28.dp)
                 )
             }
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            // Label
             Text(
                 text = action.displayName,
-                fontSize = 10.sp,
+                style = MaterialTheme.typography.labelSmall,
                 textAlign = TextAlign.Center,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                color = Color.White.copy(alpha = if (canExecute) 1f else 0.6f)
+                color = itemLabelColor.copy(alpha = if (canExecute) 1f else 0.5f)
             )
         }
     }

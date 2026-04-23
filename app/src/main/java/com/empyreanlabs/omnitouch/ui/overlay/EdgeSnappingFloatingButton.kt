@@ -4,8 +4,9 @@ import android.animation.ValueAnimator
 import android.annotation.SuppressLint
 import android.view.MotionEvent
 import android.view.WindowManager
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
@@ -13,16 +14,15 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.empyreanlabs.omnitouch.data.SettingsRepository
@@ -82,11 +82,14 @@ fun EdgeSnappingFloatingButton(
     var isMovedAside by remember { mutableStateOf(false) }
     var lastInteractionTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
 
-    // Animated opacity: dim when moved aside
+    // Animated opacity: dim when moved aside — spring for expressive feel
     val targetOpacity = if (isMovedAside) moveAsideOpacity else buttonOpacity
     val animatedOpacity by animateFloatAsState(
         targetValue = targetOpacity,
-        animationSpec = tween(durationMillis = 300),
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessMediumLow
+        ),
         label = "opacity"
     )
 
@@ -152,7 +155,7 @@ fun EdgeSnappingFloatingButton(
             .size(buttonSize.dp)
             .alpha(animatedOpacity)
             .clip(CircleShape)
-            .background(Color(0xFF2196F3))
+            .background(MaterialTheme.colorScheme.primary)
             .pointerInteropFilter { event ->
                 when (event.action) {
                     MotionEvent.ACTION_DOWN -> {
@@ -244,7 +247,7 @@ fun EdgeSnappingFloatingButton(
         Icon(
             imageVector = Icons.Default.TouchApp,
             contentDescription = "Omni Touch Button",
-            tint = Color.White,
+            tint = MaterialTheme.colorScheme.onPrimary,
             modifier = Modifier.size((buttonSize * 0.6f).dp)
         )
     }

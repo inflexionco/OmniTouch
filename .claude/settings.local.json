@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(jar tf:*)",
+      "Bash(jar xf:*)",
+      "Bash(cat:*)",
+      "Bash(./gradlew :app:compileDebugKotlin:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

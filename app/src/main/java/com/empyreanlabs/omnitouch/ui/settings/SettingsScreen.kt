@@ -7,7 +7,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -231,12 +231,12 @@ fun SettingsScreen(
                         Box(
                             modifier = Modifier
                                 .weight(1f)
-                                .clip(RoundedCornerShape(12.dp))
+                                .clip(MaterialTheme.shapes.medium)
                                 .border(
                                     width = if (selected) 2.dp else 1.dp,
                                     color = if (selected) MaterialTheme.colorScheme.primary
                                     else MaterialTheme.colorScheme.outlineVariant,
-                                    shape = RoundedCornerShape(12.dp)
+                                    shape = MaterialTheme.shapes.medium
                                 )
                                 .background(
                                     if (selected) MaterialTheme.colorScheme.primaryContainer
@@ -290,11 +290,11 @@ fun SettingsScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(10.dp))
+                        .clip(MaterialTheme.shapes.medium)
                         .border(
                             width = 1.5.dp,
                             color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                            shape = RoundedCornerShape(10.dp)
+                            shape = MaterialTheme.shapes.medium
                         )
                         .clickable { showMenuActionEditor = true }
                         .padding(vertical = 14.dp),
@@ -447,7 +447,7 @@ fun SettingsSectionCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        shape = MaterialTheme.shapes.extraLarge,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
@@ -462,7 +462,7 @@ fun SettingsSectionCard(
                 Box(
                     modifier = Modifier
                         .size(40.dp)
-                        .background(iconBackground, RoundedCornerShape(12.dp)),
+                        .background(iconBackground, MaterialTheme.shapes.medium),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -496,7 +496,7 @@ private fun AppSettingsTile(
         modifier = Modifier
             .fillMaxWidth()
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
-        shape = RoundedCornerShape(12.dp),
+        shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
     ) {
         Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
@@ -516,7 +516,7 @@ private fun DeveloperModeCard(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
+            .clip(MaterialTheme.shapes.extraLarge)
             .background(
                 Brush.linearGradient(
                     listOf(Color(0xFF1A1035), Color(0xFF2D1B69), Color(0xFF1A237E))
@@ -530,7 +530,7 @@ private fun DeveloperModeCard(
                 .size(80.dp)
                 .align(Alignment.BottomEnd)
                 .offset(x = 16.dp, y = 16.dp)
-                .background(Color(0xFF7C4DFF).copy(alpha = 0.35f), RoundedCornerShape(50.dp))
+                .background(Color(0xFF7C4DFF).copy(alpha = 0.35f), CircleShape)
         )
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -548,7 +548,7 @@ private fun DeveloperModeCard(
                     Box(
                         modifier = Modifier
                             .size(8.dp)
-                            .background(Color(0xFF7C4DFF), RoundedCornerShape(50.dp))
+                            .background(Color(0xFF7C4DFF), CircleShape)
                     )
                     Text(
                         text = "DEVELOPER MODE",
@@ -605,7 +605,7 @@ fun SettingsSliderItem(
         ) {
             Text(text = label, style = MaterialTheme.typography.bodyMedium)
             Surface(
-                shape = RoundedCornerShape(6.dp),
+                shape = MaterialTheme.shapes.extraSmall,
                 color = MaterialTheme.colorScheme.primaryContainer
             ) {
                 Text(

@@ -1,17 +1,20 @@
 package com.empyreanlabs.omnitouch.ui.overlay
 
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
@@ -20,7 +23,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.empyreanlabs.omnitouch.data.SettingsRepository
 import com.empyreanlabs.omnitouch.model.OmniTouchAction
 import com.empyreanlabs.omnitouch.util.ActionExecutor
@@ -58,19 +60,30 @@ fun GridPopupMenu(
     var gridSize by remember { mutableIntStateOf(SettingsRepository.DEFAULT_MENU_GRID_SIZE) }
     var hapticFeedback by remember { mutableStateOf(SettingsRepository.DEFAULT_HAPTIC_FEEDBACK) }
 
-    // Appearance settings (hardcoded for now, will be configurable later)
-    val menuBackgroundColor = Color(0xFF1E1E1E) // Dark background
-    val tileColor = Color(0xFF2C2C2C) // Slightly lighter tile background
-    val tileIconColor = Color.White
-    val tileLabelColor = Color.White.copy(alpha = 0.9f)
-    val dimLevel = 0.15f // Reduced from 0.5f to barely visible
+    // Appearance: use MaterialTheme surface tokens for adaptive light/dark support
+    val menuBackgroundColor = MaterialTheme.colorScheme.surfaceContainerHigh
+    val tileColor = MaterialTheme.colorScheme.surfaceContainerHighest
+    val tileIconColor = MaterialTheme.colorScheme.onSurface
+    val tileLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val dimLevel = 0.15f
 
-    // Animation state
+    // Animation state — spring for expressive entry
     var isVisible by remember { mutableStateOf(false) }
     val animatedAlpha by animateFloatAsState(
         targetValue = if (isVisible) 1f else 0f,
-        animationSpec = tween(durationMillis = 200),
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
         label = "menu_alpha"
+    )
+    val animatedScale by animateFloatAsState(
+        targetValue = if (isVisible) 1f else 0.85f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "menu_scale"
     )
 
     // Load settings
@@ -114,24 +127,25 @@ fun GridPopupMenu(
                 .clickable(onClick = onDismiss)
         )
 
-        // Menu grid positioned near button
+        // Menu grid positioned near button — scale+fade spring entry
         Box(
             modifier = Modifier
                 .offset { IntOffset(menuPosition.first, menuPosition.second) }
+                .scale(animatedScale)
+                .alpha(animatedAlpha)
         ) {
             Column(
                 modifier = Modifier
-                    .shadow(12.dp, RoundedCornerShape(16.dp))
+                    .shadow(12.dp, MaterialTheme.shapes.large)
                     .background(
-                        color = menuBackgroundColor.copy(alpha = animatedAlpha),
-                        shape = RoundedCornerShape(16.dp)
+                        color = menuBackgroundColor,
+                        shape = MaterialTheme.shapes.large
                     )
                     .padding(12.dp)
-                    .clickable(enabled = false) { }, // Prevent dismissal when clicking menu
+                    .clickable(enabled = false) { },
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Calculate rows based on grid size
                 val rows = (menuActions.size + gridSize - 1) / gridSize
 
                 for (row in 0 until rows) {
@@ -144,10 +158,10 @@ fun GridPopupMenu(
                                 val action = menuActions[index]
                                 GridMenuItem(
                                     action = action,
+                                    index = index,
                                     backgroundColor = tileColor,
                                     iconColor = tileIconColor,
                                     labelColor = tileLabelColor,
-                                    alpha = animatedAlpha,
                                     actionExecutor = actionExecutor,
                                     onClick = {
                                         scope.launch {
@@ -157,7 +171,6 @@ fun GridPopupMenu(
                                     }
                                 )
                             }
-                            // No empty spacer slots - just end the row early
                         }
                     }
                 }
@@ -221,26 +234,41 @@ private fun calculateMenuPosition(
 
 /**
  * Individual menu item in the grid.
+ * Staggered spring scale-in per index gives an expressive cascade effect.
  */
 @Composable
 private fun GridMenuItem(
     action: OmniTouchAction,
+    index: Int,
     backgroundColor: Color,
     iconColor: Color,
     labelColor: Color,
-    alpha: Float,
     actionExecutor: ActionExecutor,
     onClick: () -> Unit
 ) {
     val canExecute = remember(action) { actionExecutor.canExecuteAction(action) }
-    val itemAlpha = if (canExecute) alpha else alpha * 0.4f
-    val itemBackgroundColor = if (canExecute) backgroundColor else backgroundColor.copy(alpha = 0.5f)
+    val itemTileColor = if (canExecute) backgroundColor
+                        else backgroundColor.copy(alpha = 0.4f)
+    val itemIconColor = if (canExecute) iconColor else iconColor.copy(alpha = 0.4f)
+
+    // Staggered spring: later items have slightly lower stiffness → cascade feel
+    var appeared by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { appeared = true }
+    val itemScale by animateFloatAsState(
+        targetValue = if (appeared) 1f else 0f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = (Spring.StiffnessMedium - index * 30f).coerceAtLeast(Spring.StiffnessLow)
+        ),
+        label = "item_scale_$index"
+    )
 
     Column(
         modifier = Modifier
             .size(60.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(itemBackgroundColor.copy(alpha = itemAlpha))
+            .scale(itemScale)
+            .clip(MaterialTheme.shapes.medium)
+            .background(itemTileColor)
             .clickable(enabled = canExecute, onClick = onClick)
             .padding(6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -249,17 +277,17 @@ private fun GridMenuItem(
         Icon(
             imageVector = action.icon,
             contentDescription = action.displayName,
-            tint = iconColor.copy(alpha = itemAlpha),
+            tint = itemIconColor,
             modifier = Modifier.size(24.dp)
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = action.displayName,
-            fontSize = 9.sp,
+            style = MaterialTheme.typography.labelSmall,
             textAlign = TextAlign.Center,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            color = labelColor.copy(alpha = itemAlpha)
+            color = if (canExecute) labelColor else labelColor.copy(alpha = 0.4f)
         )
     }
 }

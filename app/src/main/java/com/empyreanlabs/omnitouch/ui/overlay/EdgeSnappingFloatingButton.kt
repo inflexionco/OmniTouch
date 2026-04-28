@@ -101,6 +101,40 @@ fun EdgeSnappingFloatingButton(
         launch { settingsRepository.hapticFeedback.collect { hapticFeedback = it } }
     }
 
+    // Keep the button active while the user is adjusting size or opacity in Settings.
+    // Skip the first emission (initial load) so a cold start doesn't reset the timer.
+    var buttonSizeInitialized by remember { mutableStateOf(false) }
+    LaunchedEffect(buttonSize) {
+        if (buttonSizeInitialized) {
+            lastInteractionTime = System.currentTimeMillis()
+            if (isMovedAside) {
+                isMovedAside = false
+                val screenWidthPx = with(density) { screenWidthDp.dp.toPx() }.toInt()
+                val buttonSizePx = with(density) { buttonSize.dp.toPx() }.toInt()
+                val restoredX = if (layoutParams.x < 0) 0 else screenWidthPx - buttonSizePx
+                animateToX(layoutParams.x, restoredX, layoutParams, windowManager, view)
+            }
+        } else {
+            buttonSizeInitialized = true
+        }
+    }
+
+    var buttonOpacityInitialized by remember { mutableStateOf(false) }
+    LaunchedEffect(buttonOpacity) {
+        if (buttonOpacityInitialized) {
+            lastInteractionTime = System.currentTimeMillis()
+            if (isMovedAside) {
+                isMovedAside = false
+                val screenWidthPx = with(density) { screenWidthDp.dp.toPx() }.toInt()
+                val buttonSizePx = with(density) { buttonSize.dp.toPx() }.toInt()
+                val restoredX = if (layoutParams.x < 0) 0 else screenWidthPx - buttonSizePx
+                animateToX(layoutParams.x, restoredX, layoutParams, windowManager, view)
+            }
+        } else {
+            buttonOpacityInitialized = true
+        }
+    }
+
     // Move-aside timer — fires when the user hasn't touched the button for moveAsideDelay ms.
     LaunchedEffect(lastInteractionTime) {
         while (true) {

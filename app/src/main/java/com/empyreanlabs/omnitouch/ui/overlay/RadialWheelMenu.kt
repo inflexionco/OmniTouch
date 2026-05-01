@@ -105,12 +105,12 @@ fun RadialWheelMenu(
     val centerX = buttonX + buttonSizePx / 2
     val centerY = buttonY + buttonSizePx / 2
 
-    // Orientation: button on LEFT edge → open RIGHT (orientation = 180°),
-    // button on RIGHT edge → open LEFT (orientation = 0°).
+    // Orientation: button on LEFT edge → open RIGHT (orientation = 0°),
+    // button on RIGHT edge → open LEFT (orientation = 180°).
     // In calculateItemAngle, startAngle = orientation - 90, so:
-    //   orientation=180 → startAngle=90..270 → items fan to the right ✓
-    //   orientation=0   → startAngle=-90..90 → items fan to the left  ✓
-    val orientation: Double = if (buttonX < screenWidthPx / 2) 180.0 else 0.0
+    //   orientation=0   → startAngle=-90..90   → cos values: 0,+,1,+,0 → fans RIGHT ✓
+    //   orientation=180 → startAngle=90..270   → cos values: 0,-,−1,-,0 → fans LEFT  ✓
+    val orientation: Double = if (buttonX < screenWidthPx / 2) 0.0 else 180.0
 
     // Vertical margin so items don't clip the status bar or nav bar
     val verticalMarginPx = with(density) { 16.dp.toPx() }.toInt()

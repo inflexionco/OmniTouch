@@ -4,7 +4,8 @@
       "Bash(jar tf:*)",
       "Bash(jar xf:*)",
       "Bash(cat:*)",
-      "Bash(./gradlew :app:compileDebugKotlin:*)"
+      "Bash(./gradlew :app:compileDebugKotlin:*)",
+      "Bash(ffmpeg:*)"
     ],
     "deny": [],
     "ask": []

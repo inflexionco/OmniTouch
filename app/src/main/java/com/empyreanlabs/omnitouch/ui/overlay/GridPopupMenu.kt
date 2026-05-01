@@ -15,7 +15,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
@@ -61,7 +60,6 @@ fun GridPopupMenu(
     var hapticFeedback by remember { mutableStateOf(SettingsRepository.DEFAULT_HAPTIC_FEEDBACK) }
 
     // Appearance: use MaterialTheme surface tokens for adaptive light/dark support
-    val menuBackgroundColor = MaterialTheme.colorScheme.surfaceContainerHigh
     val tileColor = MaterialTheme.colorScheme.surfaceContainerHighest
     val tileIconColor = MaterialTheme.colorScheme.onSurface
     val tileLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
@@ -128,7 +126,8 @@ fun GridPopupMenu(
                 .clickable(onClick = onDismiss)
         )
 
-        // Menu grid positioned near button — scale+fade spring entry
+        // Menu grid positioned near button — scale+fade spring entry, no card background
+        if (menuActions.isNotEmpty()) {
         Box(
             modifier = Modifier
                 .offset { IntOffset(menuPosition.first, menuPosition.second) }
@@ -136,14 +135,7 @@ fun GridPopupMenu(
                 .alpha(animatedAlpha)
         ) {
             Column(
-                modifier = Modifier
-                    .shadow(12.dp, MaterialTheme.shapes.large)
-                    .background(
-                        color = menuBackgroundColor,
-                        shape = MaterialTheme.shapes.large
-                    )
-                    .padding(12.dp)
-                    .clickable(enabled = false) { },
+                modifier = Modifier.clickable(enabled = false) { },
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
@@ -177,6 +169,7 @@ fun GridPopupMenu(
                 }
             }
         }
+        } // end if (menuActions.isNotEmpty())
     }
 }
 

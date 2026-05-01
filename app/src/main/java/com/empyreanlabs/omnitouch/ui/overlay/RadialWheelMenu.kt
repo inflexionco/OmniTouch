@@ -75,18 +75,22 @@ fun RadialWheelMenu(
         label = "menu_alpha"
     )
 
-    // Load settings
+    // Load settings — trigger the spring animation only after the first menuActions
+    // emission so items already exist when the radius animates from 0 → wheelRadius.
     LaunchedEffect(Unit) {
         launch {
             settingsRepository.hapticFeedback.collect { hapticFeedback = it }
         }
         launch {
+            var firstEmission = true
             settingsRepository.menuActions.collect { actionIds ->
                 menuActions = actionIds.mapNotNull { OmniTouchAction.fromId(it) }
+                if (firstEmission) {
+                    firstEmission = false
+                    isVisible = true
+                }
             }
         }
-        // Trigger animation
-        isVisible = true
     }
 
     val buttonSizePx = with(density) { buttonSize.dp.toPx() }.toInt()

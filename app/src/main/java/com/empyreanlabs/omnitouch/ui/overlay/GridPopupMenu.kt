@@ -84,7 +84,8 @@ fun GridPopupMenu(
         label = "menu_scale"
     )
 
-    // Load settings
+    // Load settings — trigger the spring animation only after the first menuActions
+    // emission so items exist when the scale/alpha animates from 0 → 1.
     LaunchedEffect(Unit) {
         launch {
             settingsRepository.menuGridSize.collect { gridSize = it }
@@ -93,12 +94,15 @@ fun GridPopupMenu(
             settingsRepository.hapticFeedback.collect { hapticFeedback = it }
         }
         launch {
+            var firstEmission = true
             settingsRepository.menuActions.collect { actionIds ->
                 menuActions = actionIds.mapNotNull { OmniTouchAction.fromId(it) }
+                if (firstEmission) {
+                    firstEmission = false
+                    isVisible = true
+                }
             }
         }
-        // Trigger animation
-        isVisible = true
     }
 
     // Calculate menu position based on button location

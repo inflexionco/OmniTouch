@@ -21,7 +21,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.empyreanlabs.omnitouch.data.SettingsRepository
 import com.empyreanlabs.omnitouch.model.OmniTouchAction
 import com.empyreanlabs.omnitouch.util.ActionExecutor
@@ -37,6 +36,8 @@ import kotlin.math.*
  * - Position-aware orientation (opens away from screen edges)
  * - Smooth spring animations - icons spring out from center
  * - Labels appear outside the wheel
+ * - No background dim — purely floating items
+ * - Items are clamped so they never go off-screen vertically
  */
 @Composable
 fun RadialWheelMenu(
@@ -59,11 +60,9 @@ fun RadialWheelMenu(
     var menuActions by remember { mutableStateOf<List<OmniTouchAction>>(emptyList()) }
     var hapticFeedback by remember { mutableStateOf(SettingsRepository.DEFAULT_HAPTIC_FEEDBACK) }
 
-    // Appearance settings (hardcoded for now, will be configurable later)
-    val wheelRadius = 120.dp // Configurable radius
-    val isFullCircle = false // false = semicircle (default), true = full circle
+    val wheelRadius = 120.dp
+    val isFullCircle = false
     val itemSize = 56.dp
-    val dimLevel = 0.15f // Reduced from 0.5f to barely visible
 
     // Animation state — spring for expressive entry
     var isVisible by remember { mutableStateOf(false) }
@@ -90,33 +89,41 @@ fun RadialWheelMenu(
         isVisible = true
     }
 
-    // Calculate center position and orientation
-    // buttonX and buttonY are screen coordinates in the full-screen window
     val buttonSizePx = with(density) { buttonSize.dp.toPx() }.toInt()
     val screenWidthPx = with(density) { screenWidth.dp.toPx() }.toInt()
+    val screenHeightPx = with(density) { screenHeight.dp.toPx() }.toInt()
+    val wheelRadiusPx = with(density) { wheelRadius.toPx() }
+    val itemSizePx = with(density) { itemSize.toPx() }.toInt()
+    // Item bounding box includes icon (itemSize) + label (~20dp)
+    val itemTotalHeightPx = with(density) { (itemSize + 24.dp).toPx() }.toInt()
 
-    // Button center in screen/composable coordinates (window is full-screen so they match)
+    // Button center in full-screen composable coordinates
     val centerX = buttonX + buttonSizePx / 2
     val centerY = buttonY + buttonSizePx / 2
 
-    // Determine orientation: button on left → open right, button on right → open left
-    val orientation: Double = if (buttonX < screenWidthPx / 2) 0.0 else 180.0
+    // Orientation: button on LEFT edge → open RIGHT (orientation = 180°),
+    // button on RIGHT edge → open LEFT (orientation = 0°).
+    // In calculateItemAngle, startAngle = orientation - 90, so:
+    //   orientation=180 → startAngle=90..270 → items fan to the right ✓
+    //   orientation=0   → startAngle=-90..90 → items fan to the left  ✓
+    val orientation: Double = if (buttonX < screenWidthPx / 2) 180.0 else 0.0
+
+    // Vertical margin so items don't clip the status bar or nav bar
+    val verticalMarginPx = with(density) { 16.dp.toPx() }.toInt()
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
+        modifier = Modifier.fillMaxSize()
     ) {
-        // Dimmed background — captures all touches outside menu items to dismiss
+        // Transparent touch-catcher to dismiss on taps outside the menu items.
+        // No background colour — zero dim.
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = dimLevel * animatedAlpha))
                 .clickable(onClick = onDismiss)
         )
 
         // Radial menu items positioned in a circle/semicircle
         menuActions.forEachIndexed { index, action ->
-            // Calculate angle for this item
             val angle = calculateItemAngle(
                 index = index,
                 totalItems = menuActions.size,
@@ -126,7 +133,7 @@ fun RadialWheelMenu(
 
             // Animated radius - spring out from center
             val animatedRadius by animateFloatAsState(
-                targetValue = if (isVisible) with(density) { wheelRadius.toPx() } else 0f,
+                targetValue = if (isVisible) wheelRadiusPx else 0f,
                 animationSpec = spring(
                     dampingRatio = Spring.DampingRatioMediumBouncy,
                     stiffness = Spring.StiffnessLow,
@@ -135,14 +142,20 @@ fun RadialWheelMenu(
                 label = "radius_$index"
             )
 
-            // Calculate item position
-            val itemX = centerX + (animatedRadius * cos(angle)).toInt()
-            val itemY = centerY + (animatedRadius * sin(angle)).toInt()
+            // Raw item center position
+            val rawItemX = centerX + (animatedRadius * cos(angle)).toInt()
+            val rawItemY = centerY + (animatedRadius * sin(angle)).toInt()
+
+            // Clamp so the full item (icon + label) stays within screen bounds
+            val clampedItemY = rawItemY.coerceIn(
+                verticalMarginPx + itemTotalHeightPx / 2,
+                screenHeightPx - verticalMarginPx - itemTotalHeightPx / 2
+            )
 
             RadialMenuItem(
                 action = action,
-                x = itemX,
-                y = itemY,
+                x = rawItemX,
+                y = clampedItemY,
                 itemSize = itemSize,
                 alpha = animatedAlpha,
                 angle = angle,
@@ -161,6 +174,9 @@ fun RadialWheelMenu(
 /**
  * Calculate angle for a specific item in the radial menu.
  * Angle is in radians.
+ *
+ * orientation=180 → startAngle=90°..270° → semicircle opens to the RIGHT
+ * orientation=0   → startAngle=-90°..90° → semicircle opens to the LEFT
  */
 private fun calculateItemAngle(
     index: Int,
@@ -199,7 +215,6 @@ private fun RadialMenuItem(
     val density = LocalDensity.current
     val canExecute = remember(action) { actionExecutor.canExecuteAction(action) }
     val itemAlpha = if (canExecute) alpha else alpha * 0.4f
-    // Use MaterialTheme primary/primaryContainer tokens instead of hardcoded blue
     val itemBackgroundColor = if (canExecute)
         MaterialTheme.colorScheme.primaryContainer
     else

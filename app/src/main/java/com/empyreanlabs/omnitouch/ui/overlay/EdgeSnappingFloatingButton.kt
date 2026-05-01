@@ -142,6 +142,10 @@ fun EdgeSnappingFloatingButton(
             val elapsed = System.currentTimeMillis() - lastInteractionTime
             if (elapsed >= moveAsideDelay && !isMovedAside && !isDragging) {
                 isMovedAside = true
+                // Dismiss the menu before sliding away — menu should never be open on an inactive button
+                if (isMenuOpen) {
+                    onMenuVisibilityChange(false)
+                }
                 animateToX(
                     from = layoutParams.x,
                     to = moveAsideTargetX(layoutParams.x, density, screenWidthDp, buttonSize),

@@ -65,8 +65,6 @@ fun GridPopupMenu(
     val tileColor = MaterialTheme.colorScheme.surfaceContainerHighest
     val tileIconColor = MaterialTheme.colorScheme.onSurface
     val tileLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
-    val dimLevel = 0.15f
-
     // Animation state — spring for expressive entry
     var isVisible by remember { mutableStateOf(false) }
     val animatedAlpha by animateFloatAsState(
@@ -119,11 +117,10 @@ fun GridPopupMenu(
         modifier = Modifier
             .fillMaxSize()
     ) {
-        // Dimmed background
+        // Transparent touch-catcher — no background dim, just captures taps outside to dismiss
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = dimLevel * animatedAlpha))
                 .clickable(onClick = onDismiss)
         )
 

@@ -9,3 +9,7 @@
 .cxx
 local.properties
 /.idea/misc.xml
+
+# Claude Code — keep local, never commit
+CLAUDE.md
+.claude/
